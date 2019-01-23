@@ -95,19 +95,20 @@ function setImage(s) {
     img = sixel.SixelImage.fromString(document.getElementById(s).innerText);
   }
   console.log('read & conversion time', (new Date()) - start);
+  window.imgS = img;
   const bb = new Uint8ClampedArray(img.width * img.height * 4);
   // fill black
   bb.fill(0);
   for (let i = 0; i < bb.length; i += 4) bb[i + 3] = 255;
   start = new Date();
   const idata = new ImageData(img.toImageData(bb, img.width, img.height), img.width, img.height);
-  console.log('output conversion time', (new Date()) - start);
   const canvas = document.getElementById('output');
   // resize canvas to hold image
   canvas.width = img.width;
   canvas.height = img.height;
   const cxt = canvas.getContext('2d');
   cxt.putImageData(idata, 0, 0);
+  console.log('output conversion time', (new Date()) - start);
 }
 
 

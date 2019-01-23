@@ -105,7 +105,8 @@ const enum SixelState {
 export class SixelImage {
   public static fromString(data: string): SixelImage {
     const bytes = new Uint8Array(data.length);
-    for (let i = 0; i < data.length; ++i) {
+    const l = data.length;
+    for (let i = 0; i < l; ++i) {
       bytes[i] = data.charCodeAt(i);
     }
     return SixelImage.fromData(bytes);
@@ -123,15 +124,17 @@ export class SixelImage {
     let repeat = 0;
 
     // parse data
-    for (let i = 0; i < data.length; ++i) {
+    const l = data.length;
+    for (let i = 0; i < l; ++i) {
       const code = data[i];
       if (state === SixelState.GROUND) {
+        if (code === 34) throw Error('not implemented')
         if (code >= 63 && code < 127) {  // data bytes
           dataPos = (~dataPos) ? dataPos : i;
         } else if (code === 33) {       // '!' compression
           if (~dataPos) {
             if (!band) {
-              band = new SixelBand(i - dataPos);
+              band = new SixelBand((img._bands.length > 1) ? img.width : i - dataPos);
               img._bands.push(band);
             }
             band.addSixels(data, dataPos, i, color);
@@ -141,7 +144,7 @@ export class SixelImage {
         } else if (code === 35) {       // '#' color
           if (~dataPos) {
             if (!band) {
-              band = new SixelBand(i - dataPos);
+              band = new SixelBand((img._bands.length > 1) ? img.width : i - dataPos);
               img._bands.push(band);
             }
             band.addSixels(data, dataPos, i, color);
@@ -151,7 +154,7 @@ export class SixelImage {
         } else if (code === 36) {       // '$' CR
           if (~dataPos) {
             if (!band) {
-              band = new SixelBand(i - dataPos);
+              band = new SixelBand((img._bands.length > 1) ? img.width : i - dataPos);
               img._bands.push(band);
             }
             band.addSixels(data, dataPos, i, color);
@@ -161,7 +164,7 @@ export class SixelImage {
         } else if (code === 45) {       // '-' LF
           if (~dataPos) {
             if (!band) {
-              band = new SixelBand(i - dataPos);
+              band = new SixelBand((img._bands.length > 1) ? img.width : i - dataPos);
               img._bands.push(band);
             }
             band.addSixels(data, dataPos, i, color);
@@ -228,7 +231,7 @@ export class SixelImage {
           repeat = repeat * 10 + code - 48;
         } else if (code >= 63 && code < 127) {
           if (!band) {
-            band = new SixelBand(i - dataPos);
+            band = new SixelBand((img._bands.length > 1) ? img.width : i - dataPos);
             img._bands.push(band);
           }
           for (let i = 0; i < repeat; ++i) {
@@ -276,11 +279,9 @@ export class SixelImage {
       }
       // border checks
       if (dx >= width || dy >= height) {
-        console.log('dx/dy condition failed', dx, dy, width, height);
         return target;
       }
       if (sx >= this.width || sy >= this.height) {
-        console.log('sx/sy condition failed', sx, sy, this.width, this.height);
         return target;
       }
       // determine copy area
