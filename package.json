@@ -8,7 +8,8 @@
     "test": "mocha lib/*.test.js",
     "tsc": "tsc",
     "watch": "tsc -w",
-    "lint": "tslint 'src/**/*.ts'"
+    "lint": "tslint 'src/**/*.ts'",
+    "start": "webpack-cli && http-server"
   },
   "keywords": [
     "sixel",
@@ -26,6 +27,8 @@
     "tslint": "^5.12.1"
   },
   "devDependencies": {
+    "canvas": "^2.3.1",
+    "http-server": "^0.11.1",
     "ts-loader": "^5.3.3",
     "typescript": "^3.2.4",
     "webpack": "^4.29.0",

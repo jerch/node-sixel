@@ -1,0 +1,78 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Sixel test</title>
+
+</head>
+
+<body>
+  <button onclick="setImage('wiki')">wiki</button>
+  <button onclick="setImage('biplane_clean.six')">biplane</button>
+  <button onclick="setImage('boticelli_clean.six')">boticelli</button>
+  <button onclick="setImage('cat2_clean.six')">cat2</button>
+  <button onclick="setImage('chess_clean.six')">chess</button>
+  <button onclick="setImage('demo05_clean.six')">demo05</button>
+  <button onclick="setImage('gnuplot_clean.six')">gnuplot</button>
+  <button onclick="setImage('leonardo_clean.six')">leonardo</button>
+  <button onclick="setImage('michael_clean.six')">michael</button>
+  <button onclick="setImage('oriole_clean.six')">oriole</button>
+  <button onclick="setImage('oriole2_clean.six')">oriole2</button>
+  <button onclick="setImage('rose16_clean.six')">rose16</button>
+  <button onclick="setImage('sampsa1_clean.sixel')">sampsa</button>
+  <button onclick="setImage('screen_clean.six')">screen</button>
+  <button onclick="setImage('sem_clean.six')">sem</button>
+  <button onclick="setImage('space_clean.six')">space</button>
+  <button onclick="setImage('testhlong_clean.six')">testhlong</button>
+  <button onclick="setImage('time_clean.six')">time</button>
+  <button onclick="setImage('trontank_clean.six')">trontank</button>
+  <button onclick="setImage('zx81_clean.six')">zx81</button>
+  <br>
+  <br>
+  <canvas id="output" style="border: 1px solid black"></canvas>
+  <script src="/dist/bundle.js"></script>
+  <script id="sampsa" type="application/json"></script>
+  <script>
+  
+async function setImage(s) {
+  const img = new sixel.SixelImage();
+
+  // read in
+  let start;
+  if (s === 'wiki') {
+    start = new Date();
+    img.writeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??-#1!42@');
+  } else {
+    const response = await fetch('/testfiles/' + s);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    start = new Date();
+    img.write(bytes);
+  }
+
+  console.log('read & conversion time', (new Date()) - start);
+  window.imgS = img;
+
+  // output
+  start = new Date();
+  const bb = new Uint8ClampedArray(img.width * img.height * 4);
+  // fill black
+  bb.fill(0);
+  for (let i = 0; i < bb.length; i += 4) {
+    bb[i + 3] = 255;
+  }
+  const idata = new ImageData(img.toImageData(bb, img.width, img.height), img.width, img.height);
+  const canvas = document.getElementById('output');
+  // resize canvas to hold image
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const cxt = canvas.getContext('2d');
+  cxt.putImageData(idata, 0, 0);
+  console.log('output to canvas time', (new Date()) - start);
+}
+
+
+  </script>
+</body>
+</html>
