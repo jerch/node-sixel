@@ -335,7 +335,7 @@ export const SIXEL_TABLE = (() => {
  * 
  * TODO:
  *  - parameters from escape sequence (respect setZero/background handling)
- *  - use width/height from attr if present
+ *  - Should pixel ratio be applied?
  */
 export class SixelImage {
   public initialState = SixelState.DATA;
@@ -345,17 +345,19 @@ export class SixelImage {
   public colors: RGBA8888[] = Object.assign([], DEFAULT_COLORS);
   public currentColor = this.colors[0];
   public currentBand: SixelBand = null;
+  private _width = 0;
+  private _height = 0;
 
   constructor(
     public setZero: number = 0,
     public backgroundColor: RGBA8888 = DEFAULT_BACKGROUND) { }
 
   public get height(): number {
-    return this.bands.length * 6;
+    return this._height || this.bands.length * 6;
   }
 
   public get width(): number {
-    return Math.max.apply(null, this.bands.map(el => el.width)) | 0;
+    return this._width || Math.max.apply(null, this.bands.map(el => el.width)) | 0;
   }
 
   public writeString(data: string): void {
@@ -388,7 +390,7 @@ export class SixelImage {
         case SixelAction.ignore:
           if (currentState === SixelState.DATA && ~dataStart) {
             if (!band) {
-              band = new SixelBand();
+              band = new SixelBand(this.width || 4);
               this.bands.push(band);
             }
             band.addSixels(data, dataStart, i, color);
@@ -397,7 +399,7 @@ export class SixelImage {
           break;
         case SixelAction.repeatedDraw:
           if (!band) {
-            band = new SixelBand();
+            band = new SixelBand(this.width || 4);
             this.bands.push(band);
           }
           let repeat = 0;
@@ -419,7 +421,7 @@ export class SixelImage {
         case SixelAction.cr:
           if (~dataStart) {
             if (!band) {
-              band = new SixelBand();
+              band = new SixelBand(this.width || 4);
               this.bands.push(band);
             }
             band.addSixels(data, dataStart, i, color);
@@ -432,7 +434,7 @@ export class SixelImage {
         case SixelAction.lf:
           if (~dataStart) {
             if (!band) {
-              band = new SixelBand();
+              band = new SixelBand(this.width || 4);
               this.bands.push(band);
             }
             band.addSixels(data, dataStart, i, color);
@@ -454,7 +456,11 @@ export class SixelImage {
               color = this.colors[params[0]] || this.colors[0];
             }
           } else if (currentState === SixelState.ATTR) {
-            // TODO
+            // we only use width and height
+            if (params.length === 4) {
+              this._width = params[2];
+              this._height = params[3];
+            }
           }
           params = [0];
           dataStart = -1;
@@ -467,7 +473,7 @@ export class SixelImage {
     }
     if (currentState === SixelState.DATA && ~dataStart) {
       if (!band) {
-        band = new SixelBand();
+        band = new SixelBand(this.width || 4);
         this.bands.push(band);
       }
       band.addSixels(data, dataStart, end, color);
