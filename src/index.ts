@@ -35,7 +35,7 @@ Table 2-3 VT340 Default Color Map Map Location 	Default Color
  * 16 predefined color registers of VT340
  */
 const DEFAULT_COLORS = [
-  normalizeRGB(0,   0,  0),
+  normalizeRGB(0, 0, 0),
   normalizeRGB(20, 20, 80),
   normalizeRGB(80, 13, 13),
   normalizeRGB(20, 80, 20),
@@ -62,32 +62,34 @@ const DEFAULT_BACKGROUND = {
 
 // color conversions
 function hue2rgb(p: number, q: number, t: number): number {
-  if(t < 0) t += 1;
-  if(t > 1) t -= 1;
-  if(t < 1/6) return p + (q - p) * 6 * t;
-  if(t < 1/2) return q;
-  if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return p + (q - p) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
   return p;
 }
 
 function hlsToRgb(h: number, l: number, s: number): IColor {
-  var r, g, b;
+  let r;
+  let g
+  let b;
 
-  if(s == 0){
-      r = g = b = l;
-  }else{
-      var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-      var p = 2 * l - q;
-      r = hue2rgb(p, q, h + 1/3);
-      g = hue2rgb(p, q, h);
-      b = hue2rgb(p, q, h - 1/3);
+  if (s == 0) {
+    r = g = b = l;
+  } else {
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
   }
 
-  return {r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a: 255};
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a: 255 };
 }
 
 function normalizeRGB(r: number, g: number, b: number): IColor {
-  return {r: Math.round(r / 100 * 255), g: Math.round(g / 100 * 255), b: Math.round(b / 100 * 255), a: 255};
+  return { r: Math.round(r / 100 * 255), g: Math.round(g / 100 * 255), b: Math.round(b / 100 * 255), a: 255 };
 }
 
 function normalizeHLS(h: number, l: number, s: number): IColor {
@@ -318,7 +320,7 @@ export const SIXEL_TABLE = (() => {
  * 
  * TODO:
  *  - streamline input
- *  - parameters from escape sequence
+ *  - parameters from escape sequence (setZero)
  *  - use width/height from attr if present
  */
 export class SixelImage {
@@ -331,7 +333,7 @@ export class SixelImage {
 
   constructor(
     public setZero: number = 0,
-    public backgroundColor: IColor = DEFAULT_BACKGROUND) {}
+    public backgroundColor: IColor = DEFAULT_BACKGROUND) { }
 
   public get height(): number {
     return this.bands.length * 6;
@@ -425,10 +427,10 @@ export class SixelImage {
             if (params.length >= 5) {
               if (params[1] === 1) {
                 // HLS color
-                this.colors[params[0]] = normalizeHLS(params[2], params[3], params[4]);
+                this.colors[params[0]] = color = normalizeHLS(params[2], params[3], params[4]);
               } else if (params[1] === 2) {
                 // RGB color
-                this.colors[params[0]] = normalizeRGB(params[2], params[3], params[4]);
+                this.colors[params[0]] = color = normalizeRGB(params[2], params[3], params[4]);
               }
             } else if (params.length === 1) {
               color = this.colors[params[0]] || this.colors[0];
