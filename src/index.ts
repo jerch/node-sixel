@@ -374,6 +374,9 @@ export class SixelImage {
       const code = data[i];
       const transition = SIXEL_TABLE.table[currentState << 8 | (code < 0x7F ? code : 0xFF)];
       switch (transition >> 4) {
+        case SixelAction.draw:
+          dataStart = (~dataStart) ? dataStart : i;
+          break;
         case SixelAction.ignore:
           if (currentState === SixelState.DATA && ~dataStart) {
             if (!band) {
@@ -384,8 +387,26 @@ export class SixelImage {
           }
           dataStart = -1;
           break;
-        case SixelAction.draw:
-          dataStart = (~dataStart) ? dataStart : i;
+        case SixelAction.repeatedDraw:
+          if (!band) {
+            band = new SixelBand();
+            this.bands.push(band);
+          }
+          let repeat = 0;
+          for (let i = 0; i < params.length; ++i) {
+            repeat += params[i];
+          }
+          for (let i = 0; i < repeat; ++i) {
+            band.addSixel(code, color);
+          }
+          dataStart = -1;
+          params = [0];
+          break;
+        case SixelAction.storeParam:
+          params[params.length - 1] = params[params.length - 1] * 10 + code - 48;
+          break;
+        case SixelAction.shiftParam:
+          params.push(0);
           break;
         case SixelAction.cr:
           if (~dataStart) {
@@ -410,27 +431,6 @@ export class SixelImage {
             dataStart = -1;
           }
           band = null;
-          break;
-        case SixelAction.repeatedDraw:
-          if (!band) {
-            band = new SixelBand();
-            this.bands.push(band);
-          }
-          let repeat = 0;
-          for (let i = 0; i < params.length; ++i) {
-            repeat += params[i];
-          }
-          for (let i = 0; i < repeat; ++i) {
-            band.addSixel(code, color);
-          }
-          dataStart = -1;
-          params = [0];
-          break;
-        case SixelAction.storeParam:
-          params[params.length - 1] = params[params.length - 1] * 10 + code - 48;
-          break;
-        case SixelAction.shiftParam:
-          params.push(0);
           break;
         case SixelAction.applyParam:
           if (currentState === SixelState.COLOR) {
