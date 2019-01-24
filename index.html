@@ -29,12 +29,34 @@
   <button onclick="setImage('time_clean.six')">time</button>
   <button onclick="setImage('trontank_clean.six')">trontank</button>
   <button onclick="setImage('zx81_clean.six')">zx81</button>
-  <br>
-  <br>
+  <br><br>
+  <label><input type="checkbox" name="slow" id="slow" value="value">Simulate slow chunks</label>
+  <br><br>
+  <span id="stats"></span>
+  <br><br>
   <canvas id="output" style="border: 1px solid black"></canvas>
   <script src="/dist/bundle.js"></script>
   <script id="sampsa" type="application/json"></script>
   <script>
+
+function drawImage(img) {
+  if (!img.width || !img.height) {
+    return;
+  }
+  const bb = new Uint8ClampedArray(img.width * img.height * 4);
+  // fill black
+  bb.fill(0);
+  for (let i = 0; i < bb.length; i += 4) {
+    bb[i + 3] = 255;
+  }
+  const idata = new ImageData(img.toImageData(bb, img.width, img.height), img.width, img.height);
+  const canvas = document.getElementById('output');
+  // resize canvas to hold image
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const cxt = canvas.getContext('2d');
+  cxt.putImageData(idata, 0, 0);
+}
   
 async function setImage(s) {
   const img = new sixel.SixelImage();
@@ -48,7 +70,25 @@ async function setImage(s) {
     const response = await fetch('/testfiles/' + s);
     const bytes = new Uint8Array(await response.arrayBuffer());
     start = new Date();
-    img.write(bytes);
+    if (document.getElementById('slow').checked) {
+      const drawHandle = setInterval(() => drawImage(img), 100);
+      let i = 0;
+      const endTens = bytes.length - (bytes.length % 10);
+      while (i < endTens) {
+        img.write(bytes, i, i + 10);
+        document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
+        await new Promise(resolve => setTimeout(resolve, 1));
+        i += 10;
+      }
+      if (bytes.length % 10) {
+        img.write(bytes, endTens, bytes.length);
+      }
+      document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
+      clearInterval(drawHandle);
+    } else {
+      img.write(bytes);
+      document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
+    }
   }
 
   console.log('read & conversion time', (new Date()) - start);

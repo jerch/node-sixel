@@ -319,7 +319,6 @@ export const SIXEL_TABLE = (() => {
  * for further processing.
  * 
  * TODO:
- *  - streamline input
  *  - parameters from escape sequence (setZero)
  *  - use width/height from attr if present
  */
@@ -330,6 +329,7 @@ export class SixelImage {
   public params: number[] = [0];
   public colors: IColor[] = Object.assign([], DEFAULT_COLORS);
   public currentColor = this.colors[0];
+  public currentBand: SixelBand = null;
 
   constructor(
     public setZero: number = 0,
@@ -340,7 +340,7 @@ export class SixelImage {
   }
 
   public get width(): number {
-    return Math.max.apply(null, this.bands.map(el => el.width));
+    return Math.max.apply(null, this.bands.map(el => el.width)) | 0;
   }
 
   public writeString(data: string): void {
@@ -359,7 +359,7 @@ export class SixelImage {
   public write(data: UintTypedArray, start: number = 0, end: number = data.length): void {
     let currentState = this.currentState;
     let dataStart = -1;
-    let band: SixelBand = null;
+    let band: SixelBand = this.currentBand;
     let color: IColor = this.currentColor;
     let params = this.params;
 
@@ -452,9 +452,14 @@ export class SixelImage {
         band = new SixelBand();
         this.bands.push(band);
       }
-      band.addSixels(data, dataStart, data.length, color);
+      band.addSixels(data, dataStart, end, color);
     }
-    // TODO: preserve state for chunked writes
+    
+    // save state and buffers
+    this.currentState = currentState;
+    this.currentColor = color;
+    this.params = params;
+    this.currentBand = band;
   }
 
   /**
