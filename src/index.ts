@@ -197,6 +197,7 @@ class SixelBand {
  * COMPRESSION
  *    48 - 57     digits                    store param               COMPRESSION
  *    63 - 126    data bytes                repeated draw             DATA
+ *    33 !        compression               shift param               COMPRESSION
  *    other                                 ignore                    COMPRESSION
  * 
  * ATTR
@@ -288,6 +289,7 @@ export const SIXEL_TABLE = (() => {
   // COMPRESSION
   table.addMany(r(48, 58), SixelState.COMPRESSION, SixelAction.storeParam, SixelState.COMPRESSION);
   table.addMany(r(63, 127), SixelState.COMPRESSION, SixelAction.repeatedDraw, SixelState.DATA);
+  table.add(33, SixelState.COMPRESSION, SixelAction.shiftParam, SixelState.COMPRESSION);
   // ATTR
   table.addMany(r(48, 58), SixelState.ATTR, SixelAction.storeParam, SixelState.ATTR);
   table.add(59, SixelState.ATTR, SixelAction.shiftParam, SixelState.ATTR);
@@ -317,9 +319,14 @@ export const SIXEL_TABLE = (() => {
  * The class provides image attributes `width` and `height`.
  * With `toImageData` the pixel data can be copied to an `ImageData`
  * for further processing.
+ * `write` and `writeString` decode the data streamlined, therefore it
+ * is possible to grab partial images during transmission.
+ * Note that the class is meant to run behind an escape sequence parser,
+ * thus the data should only be the real data part of the sequence and not
+ * contain the introducer and the closing bytes.
  * 
  * TODO:
- *  - parameters from escape sequence (setZero)
+ *  - parameters from escape sequence (respect setZero/background handling)
  *  - use width/height from attr if present
  */
 export class SixelImage {
@@ -409,7 +416,10 @@ export class SixelImage {
             band = new SixelBand();
             this.bands.push(band);
           }
-          const repeat = params[0];
+          let repeat = 0;
+          for (let i = 0; i < params.length; ++i) {
+            repeat += params[i];
+          }
           for (let i = 0; i < repeat; ++i) {
             band.addSixel(code, color);
           }
