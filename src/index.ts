@@ -1,12 +1,29 @@
-export interface IColor {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
-
+/**
+ * RGBA8888 type
+ * This type denotes the byte order for 32 bit color values.
+ * The resulting word order depends on the system endianess:
+ *    big endian    - RGBA32
+ *    bittle endian - ABGR32
+ * Use `toRGBA8888` and `fromRGBA8888` to convert the color values
+ * respecting the system endianess.
+ */
+export type RGBA8888 = number;
 type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
 
+/** system endianess */
+const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
+
+export function toRGBA8888(r: number, g: number, b: number, a: number): RGBA8888 {
+  return (BIG_ENDIAN) 
+    ? (r & 0xFF) << 24 | (g & 0xFF) << 16 | (b % 0xFF) << 8 | (a & 0xFF)    // RGBA32
+    : (a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF);   // ABGR32
+}
+
+export function fromRGBA8888(color: RGBA8888): number[] {
+  return (BIG_ENDIAN)
+    ? [color >> 24, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]
+    : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >> 24];
+}
 
 /*
 taken from https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
@@ -53,12 +70,7 @@ const DEFAULT_COLORS = [
   normalizeRGB(80, 80, 80),
 ];
 
-const DEFAULT_BACKGROUND = {
-  r: 0,
-  g: 0,
-  b: 0,
-  a: 0
-}
+const DEFAULT_BACKGROUND = 0; // r: 0, g: 0, b: 0, a: 0
 
 // color conversions
 function hue2rgb(p: number, q: number, t: number): number {
@@ -70,7 +82,7 @@ function hue2rgb(p: number, q: number, t: number): number {
   return p;
 }
 
-function hlsToRgb(h: number, l: number, s: number): IColor {
+function hlsToRgb(h: number, l: number, s: number): RGBA8888 {
   let r;
   let g
   let b;
@@ -85,14 +97,18 @@ function hlsToRgb(h: number, l: number, s: number): IColor {
     b = hue2rgb(p, q, h - 1 / 3);
   }
 
-  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255), a: 255 };
+  return (BIG_ENDIAN) 
+    ? Math.round(r * 255) << 24 | Math.round(g * 255) << 16 | Math.round(b * 255) << 8 | 0xFF   // RGBA32
+    : 0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255);  // ABGR32
 }
 
-function normalizeRGB(r: number, g: number, b: number): IColor {
-  return { r: Math.round(r / 100 * 255), g: Math.round(g / 100 * 255), b: Math.round(b / 100 * 255), a: 255 };
+function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
+  return (BIG_ENDIAN)
+    ? Math.round(r / 100 * 255) << 24 | Math.round(g / 100 * 255) << 16 | Math.round(b / 100 * 255) << 8 | 0xFF   // RGBA32
+    : 0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255);  // ABGR32
 }
 
-function normalizeHLS(h: number, l: number, s: number): IColor {
+function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
   // Note: hue value is turned by 240° in VT340
   return hlsToRgb((h + 240) / 360 - 1, l / 100, s / 100);
 }
@@ -108,25 +124,25 @@ function normalizeHLS(h: number, l: number, s: number): IColor {
 class SixelBand {
   private _cursor = 0;
   public width = 0;
-  public data: Uint8ClampedArray;
-  public touched: Uint8ClampedArray;
+  public data: Uint32Array;
+  public touched: Uint8Array;
   constructor(length: number = 4) {
-    this.data = new Uint8ClampedArray(length * 6 * 4);
-    this.touched = new Uint8ClampedArray(length);
+    this.data = new Uint32Array(length * 6);
+    this.touched = new Uint8Array(length);
   }
 
   /**
    * Add a sixel to the band.
    * Called by the parser for any data byte of the sixel stream.
    */
-  public addSixel(code: number, color: IColor): void {
-    const pos = this._cursor * 24;
+  public addSixel(code: number, color: RGBA8888): void {
+    const pos = this._cursor * 6;
     // resize by power of 2 if needed
     if (pos >= this.data.length) {
-      const data = new Uint8ClampedArray(this.data.length * 2);
-      data.set(this.data);
-      this.data = data;
-      const touched = new Uint8ClampedArray(this.width * 2);
+      const data32 = new Uint32Array(this.data.length * 2);
+      data32.set(this.data);
+      this.data = data32;
+      const touched = new Uint8Array(this.touched.length * 2);
       touched.set(this.touched);
       this.touched = touched;
     }
@@ -135,10 +151,7 @@ class SixelBand {
     this.touched[this._cursor] |= code;
     for (let p = 0; p < 6; ++p) {
       if (code & (1 << p)) {
-        this.data[pos + p * 4] = color.r;
-        this.data[pos + p * 4 + 1] = color.g;
-        this.data[pos + p * 4 + 2] = color.b;
-        this.data[pos + p * 4 + 3] = color.a;
+        this.data[pos + p] = color;
       }
     }
     // update cursor pos and length
@@ -146,7 +159,7 @@ class SixelBand {
     this.width = Math.max(this.width, this._cursor);
   }
 
-  public addSixels(data: UintTypedArray, start: number, end: number, color: IColor): void {
+  public addSixels(data: UintTypedArray, start: number, end: number, color: RGBA8888): void {
     for (let pos = start; pos < end; ++pos) {
       this.addSixel(data[pos], color);
     }
@@ -164,17 +177,12 @@ class SixelBand {
    * Low level method to access the band's image data.
    * Not for direct usage (no bound checks), use `SixelImage.toImageData` instead.
    */
-  public copyPixelRow(target: Uint8ClampedArray, offset: number, row: number, start: number, length: number): void {
+  public copyPixelRow(target: Uint32Array, offset: number, row: number, start: number, length: number): void {
     const end = Math.min(this.width, start + length);
     const touchMask = 1 << row;
-    row *= 4;
     for (let i = start; i < end; ++i) {
       if ((this.touched[i] & touchMask)) {
-        const idx = i * 24;
-        target[offset + i * 4] = this.data[idx + row];
-        target[offset + i * 4 + 1] = this.data[idx + row + 1];
-        target[offset + i * 4 + 2] = this.data[idx + row + 2];
-        target[offset + i * 4 + 3] = this.data[idx + row + 3];
+        target[offset + i] = this.data[i * 6 + row];
       }
     }
   }
@@ -334,13 +342,13 @@ export class SixelImage {
   public currentState = this.initialState;
   public bands: SixelBand[] = [];
   public params: number[] = [0];
-  public colors: IColor[] = Object.assign([], DEFAULT_COLORS);
+  public colors: RGBA8888[] = Object.assign([], DEFAULT_COLORS);
   public currentColor = this.colors[0];
   public currentBand: SixelBand = null;
 
   constructor(
     public setZero: number = 0,
-    public backgroundColor: IColor = DEFAULT_BACKGROUND) { }
+    public backgroundColor: RGBA8888 = DEFAULT_BACKGROUND) { }
 
   public get height(): number {
     return this.bands.length * 6;
@@ -367,7 +375,7 @@ export class SixelImage {
     let currentState = this.currentState;
     let dataStart = -1;
     let band: SixelBand = this.currentBand;
-    let color: IColor = this.currentColor;
+    let color: RGBA8888 = this.currentColor;
     let params = this.params;
 
     for (let i = start; i < end; ++i) {
@@ -477,6 +485,7 @@ export class SixelImage {
    * `target` should be specified with correct `width` and `height`.
    * `dx` and `dy` mark the destination offset.
    * `sx` and `sy` mark the source offset, `swidth` and `sheight` the size to be copied.
+   * Returns the modified `target`.
    */
   public toImageData(
     target: Uint8ClampedArray, width: number, height: number,
@@ -500,13 +509,14 @@ export class SixelImage {
     if (swidth <= 0 || sheight <= 0) {
       return;
     }
-    // copy data
+    // copy data on 32 bit values
+    const target32 = new Uint32Array(target.buffer);
     let p = sy % 6;
     let bandIdx = (sy / 6) | 0;
     let i = 0;
     while (bandIdx < this.bands.length && bandIdx * 6 + p < sy + sheight) {
-      const offset = ((dy + i) * width + dx) * 4;
-      this.bands[bandIdx].copyPixelRow(target, offset, p, sx, swidth);
+      const offset = (dy + i) * width + dx;
+      this.bands[bandIdx].copyPixelRow(target32, offset, p, sx, swidth);
       p++;
       i++;
       if (p === 6) {

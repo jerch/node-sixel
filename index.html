@@ -97,11 +97,9 @@ async function setImage(s) {
   // output
   start = new Date();
   const bb = new Uint8ClampedArray(img.width * img.height * 4);
-  // fill black
-  bb.fill(0);
-  for (let i = 0; i < bb.length; i += 4) {
-    bb[i + 3] = 255;
-  }
+  // fill black (faster variant with 32 bit color)
+  const bb32 = new Uint32Array(bb.buffer);
+  bb32.fill(sixel.toRGBA8888(0, 0, 0, 255)); // r: 0, g: 0, b: 0, a: 255
   const idata = new ImageData(img.toImageData(bb, img.width, img.height), img.width, img.height);
   const canvas = document.getElementById('output');
   // resize canvas to hold image
