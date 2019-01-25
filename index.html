@@ -30,7 +30,9 @@
   <button onclick="setImage('trontank_clean.six')">trontank</button>
   <button onclick="setImage('zx81_clean.six')">zx81</button>
   <br><br>
-  <label><input type="checkbox" name="slow" id="slow" value="value">Simulate slow chunks</label>
+  <label><input type="checkbox" name="slow" id="slow" value="value"> Simulate slow chunks</label>
+  <br>
+  <label><input type="color" name="fillColor" id="fillColor" value="#000000" onchange="redraw()"> background color</label>
   <br><br>
   <span id="stats"></span>
   <br><br>
@@ -40,6 +42,7 @@
   <script>
 
 let drawHandle = null;
+let imgS = null;
 
 /**
  * example how to get the img data
@@ -52,18 +55,39 @@ function drawImage(img) {
   canvas.height = img.height;
   // grab imagedata
   const target = ctx.getImageData(0, 0, img.width, img.height);
-  img.toImageData(target.data, img.width, img.height);
+  img.toImageData(
+    // target metrics
+    target.data, img.width, img.height,
+    // dx, dy
+    0, 0,
+    // sx, sy, width, height
+    0, 0, img.width, img.height,
+    // fill color
+    true, sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
   ctx.putImageData(target, 0, 0);
+}
+
+function hexColorToRGB(color) {
+  const value = parseInt(color.slice(1), 16);
+  console.log();
+  return [
+  (value >> 16) & 0xFF,
+  (value >> 8) & 0xFF,
+    value & 0xFF,
+    255
+  ]
+}
+
+function redraw() {
+  if (imgS) drawImage(imgS);
 }
   
 async function setImage(s) {
   clearInterval(drawHandle);
 
-  let fillColor = sixel.toRGBA8888(0, 0, 0, 255);
-  if (s === 'cat2_clean.six') {
-    fillColor = sixel.toRGBA8888(36, 143, 107, 255);
-  }
-  const img = new sixel.SixelImage(fillColor);
+  // create image
+  const img = new sixel.SixelImage();
+  imgS = img;
 
   // read in
   let start;
@@ -98,7 +122,6 @@ async function setImage(s) {
   }
 
   console.log('read & conversion time', (new Date()) - start);
-  window.imgS = img;
 
   // output
   start = new Date();
