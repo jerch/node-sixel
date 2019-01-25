@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # enable sixel scrolling
+# set this to l for mlterm (swapped meaning)
 echo -e "\x1b[?80h"
 
 clear
