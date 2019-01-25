@@ -511,7 +511,7 @@ export class SixelImage {
     swidth = Math.min(swidth, rx, this.width);
     sheight = Math.min(sheight, ry, this.height);
     if (swidth <= 0 || sheight <= 0) {
-      return;
+      return target;
     }
     // copy data on 32 bit values
     const target32 = new Uint32Array(target.buffer);
