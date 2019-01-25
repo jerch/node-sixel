@@ -29,25 +29,25 @@ export function fromRGBA8888(color: RGBA8888): number[] {
  * 16 predefined color registers of VT340
  * 
  * taken from https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
- * Table 2-3 VT340 Default Color Map Map Location 	Default Color
+ * Table 2-3 VT340 Default Color Map Map Location  Default Color
  * * These colors are less saturated than colors 1 through 6.
  *                R   G   B
- * 0 	Black   	  0 	0 	0
- * 1 	Blue 	      20 	20 	80
- * 2 	Red 	      80 	13 	13
- * 3 	Green 	    20 	80 	20
- * 4 	Magenta 	  80 	20 	80
- * 5 	Cyan 	      20 	80 	80
- * 6 	Yellow 	    80 	80 	20
- * 7 	Gray 50% 	  53 	53 	53
- * 8 	Gray 25% 	  26 	26 	26
- * 9 	Blue* 	    33 	33 	60
- * 10 Red* 	      60 	26 	26
- * 11 Green* 	    33 	60 	33
- * 12 Magenta* 	  60 	33 	60
- * 13 Cyan* 	    33 	60 	60
- * 14 Yellow* 	  60 	60 	33
- * 15 Gray 75% 	  80 	80 	80
+ * 0  Black       0  0  0
+ * 1  Blue        20  20  80
+ * 2  Red         80  13  13
+ * 3  Green       20  80  20
+ * 4  Magenta     80  20  80
+ * 5  Cyan        20  80  80
+ * 6  Yellow      80  80  20
+ * 7  Gray 50%    53  53  53
+ * 8  Gray 25%    26  26  26
+ * 9  Blue*       33  33  60
+ * 10 Red*        60  26  26
+ * 11 Green*      33  60  33
+ * 12 Magenta*    60  33  60
+ * 13 Cyan*       33  60  60
+ * 14 Yellow*     60  60  33
+ * 15 Gray 75%    80  80  80
 */
 const DEFAULT_COLORS = [
   normalizeRGB(0, 0, 0),
@@ -68,7 +68,8 @@ const DEFAULT_COLORS = [
   normalizeRGB(80, 80, 80),
 ];
 
-const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0 ,0, 0, 255);
+const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0, 0, 0, 255);
+const HAS_ALPHA = (BIG_ENDIAN) ? 0xFF : 0xFF000000;
 
 // color conversions
 function hue2rgb(p: number, q: number, t: number): number {
@@ -123,10 +124,8 @@ class SixelBand {
   private _cursor = 0;
   public width = 0;
   public data: Uint32Array;
-  public touched: Uint8Array;
   constructor(length: number = 4) {
     this.data = new Uint32Array(length * 6);
-    this.touched = new Uint8Array(length);
   }
 
   /**
@@ -140,13 +139,9 @@ class SixelBand {
       const data = new Uint32Array(this.data.length * 2);
       data.set(this.data);
       this.data = data;
-      const touched = new Uint8Array(this.touched.length * 2);
-      touched.set(this.touched);
-      this.touched = touched;
     }
     // update data
     code -= 63;
-    this.touched[this._cursor] |= code;
     for (let p = 0; p < 6; ++p) {
       if (code & (1 << p)) {
         this.data[pos + p] = color;
@@ -177,10 +172,10 @@ class SixelBand {
    */
   public copyPixelRow(target: Uint32Array, offset: number, row: number, start: number, length: number): void {
     const end = Math.min(this.width, start + length);
-    const touchMask = 1 << row;
+    let pixel = 0;
     for (let i = start; i < end; ++i) {
-      if ((this.touched[i] & touchMask)) {
-        target[offset + i] = this.data[i * 6 + row];
+      if ((pixel = this.data[i * 6 + row]) & HAS_ALPHA) {
+        target[offset + i] = pixel;
       }
     }
   }
@@ -515,6 +510,7 @@ export class SixelImage {
     }
     // copy data on 32 bit values
     const target32 = new Uint32Array(target.buffer);
+    // TODO: limit background filling to actual image clipping area
     if (fillZero) {
       target32.fill(fillColor);
     }
