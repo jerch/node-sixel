@@ -1,14 +1,14 @@
 /**
- * RGBA8888 type
  * This type denotes the byte order for 32 bit color values.
  * The resulting word order depends on the system endianess:
  *    big endian    - RGBA32
  *    bittle endian - ABGR32
+ * 
  * Use `toRGBA8888` and `fromRGBA8888` to convert the color values
  * respecting the system endianess.
  */
 export type RGBA8888 = number;
-type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
+export type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
 
 /** system endianess */
 const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
@@ -25,32 +25,30 @@ export function fromRGBA8888(color: RGBA8888): number[] {
     : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >> 24];
 }
 
-/*
-taken from https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
-Table 2-3 VT340 Default Color Map Map Location 	Default Color
-* These colors are less saturated than colors 1 through 6.
-              R   G   B
-0 	Black   	0 	0 	0
-1 	Blue 	    20 	20 	80
-2 	Red 	    80 	13 	13
-3 	Green 	  20 	80 	20
-4 	Magenta 	80 	20 	80
-5 	Cyan 	    20 	80 	80
-6 	Yellow 	  80 	80 	20
-7 	Gray 50% 	53 	53 	53
-8 	Gray 25% 	26 	26 	26
-9 	Blue* 	  33 	33 	60
-10 	Red* 	    60 	26 	26
-11 	Green* 	  33 	60 	33
-12 	Magenta* 	60 	33 	60
-13 	Cyan* 	  33 	60 	60
-14 	Yellow* 	60 	60 	33
-15 	Gray 75% 	80 	80 	80
-*/
-
 /**
  * 16 predefined color registers of VT340
- */
+ * 
+ * taken from https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
+ * Table 2-3 VT340 Default Color Map Map Location 	Default Color
+ * * These colors are less saturated than colors 1 through 6.
+ *                R   G   B
+ * 0 	Black   	  0 	0 	0
+ * 1 	Blue 	      20 	20 	80
+ * 2 	Red 	      80 	13 	13
+ * 3 	Green 	    20 	80 	20
+ * 4 	Magenta 	  80 	20 	80
+ * 5 	Cyan 	      20 	80 	80
+ * 6 	Yellow 	    80 	80 	20
+ * 7 	Gray 50% 	  53 	53 	53
+ * 8 	Gray 25% 	  26 	26 	26
+ * 9 	Blue* 	    33 	33 	60
+ * 10 Red* 	      60 	26 	26
+ * 11 Green* 	    33 	60 	33
+ * 12 Magenta* 	  60 	33 	60
+ * 13 Cyan* 	    33 	60 	60
+ * 14 Yellow* 	  60 	60 	33
+ * 15 Gray 75% 	  80 	80 	80
+*/
 const DEFAULT_COLORS = [
   normalizeRGB(0, 0, 0),
   normalizeRGB(20, 20, 80),
@@ -70,7 +68,7 @@ const DEFAULT_COLORS = [
   normalizeRGB(80, 80, 80),
 ];
 
-const DEFAULT_BACKGROUND = 0; // r: 0, g: 0, b: 0, a: 0
+const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0 ,0, 0, 255);
 
 // color conversions
 function hue2rgb(p: number, q: number, t: number): number {
@@ -139,9 +137,9 @@ class SixelBand {
     const pos = this._cursor * 6;
     // resize by power of 2 if needed
     if (pos >= this.data.length) {
-      const data32 = new Uint32Array(this.data.length * 2);
-      data32.set(this.data);
-      this.data = data32;
+      const data = new Uint32Array(this.data.length * 2);
+      data.set(this.data);
+      this.data = data;
       const touched = new Uint8Array(this.touched.length * 2);
       touched.set(this.touched);
       this.touched = touched;
@@ -276,16 +274,15 @@ export class TransitionTable {
   }
 }
 
-export const SIXEL_TABLE = (() => {
+const SIXEL_TABLE = (() => {
   const table = new TransitionTable(1280); //  5 STATES * 256 codes
   const states: number[] = r(SixelState.DATA, SixelState.COLOR + 1);
   let state: any;
 
-  // default transition
+  // default transition for all states
   for (state in states) {
-    for (let code = 0; code <= 0x7F; ++code) {
-      table.add(code, state, SixelAction.ignore, state); // ignore never changes state
-    }
+    // Note: ignore never changes state
+    table.addMany(r(0x00, 0x80), state, SixelAction.ignore, state);
   }
   // DATA state
   table.addMany(r(63, 127), SixelState.DATA, SixelAction.draw, SixelState.DATA);
@@ -333,9 +330,10 @@ export const SIXEL_TABLE = (() => {
  * thus the data should only be the real data part of the sequence and not
  * contain the introducer and the closing bytes.
  * 
- * TODO:
- *  - parameters from escape sequence (respect setZero/background handling)
- *  - Should pixel ratio be applied?
+ * The constructor takes two optional arguments - `fillZero` and `fillColor`.
+ * If `fillZero` is true `fillColor` gets applied to empty pixels. This resembles
+ * the zero handling of VT340 and defaults to true. `fillColor` should be set to
+ * the current background color of the terminal (defaults to black).
  */
 export class SixelImage {
   public initialState = SixelState.DATA;
@@ -348,9 +346,7 @@ export class SixelImage {
   private _width = 0;
   private _height = 0;
 
-  constructor(
-    public setZero: number = 0,
-    public backgroundColor: RGBA8888 = DEFAULT_BACKGROUND) { }
+  constructor(public fillColor: RGBA8888 = DEFAULT_BACKGROUND, public fillZero: boolean = true) {}
 
   public get height(): number {
     return this._height || this.bands.length * 6;
@@ -491,12 +487,14 @@ export class SixelImage {
    * `target` should be specified with correct `width` and `height`.
    * `dx` and `dy` mark the destination offset.
    * `sx` and `sy` mark the source offset, `swidth` and `sheight` the size to be copied.
+   * With `fillZero` and `fillColor` the default handling of zero pixels can be overwritten.
    * Returns the modified `target`.
    */
   public toImageData(
     target: Uint8ClampedArray, width: number, height: number,
     dx: number = 0, dy: number = 0,
-    sx: number = 0, sy: number = 0, swidth: number = this.width, sheight: number = this.height): Uint8ClampedArray {
+    sx: number = 0, sy: number = 0, swidth: number = this.width, sheight: number = this.height,
+    fillZero: boolean = this.fillZero, fillColor: RGBA8888 = this.fillColor): Uint8ClampedArray {
     if (width * height * 4 !== target.length) {
       throw new Error('wrong geometry of target');
     }
@@ -517,6 +515,9 @@ export class SixelImage {
     }
     // copy data on 32 bit values
     const target32 = new Uint32Array(target.buffer);
+    if (fillZero) {
+      target32.fill(fillColor);
+    }
     let p = sy % 6;
     let bandIdx = (sy / 6) | 0;
     let i = 0;
