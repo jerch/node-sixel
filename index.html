@@ -120,6 +120,8 @@ async function setImage(s) {
         if (drawHandle !== localHandle) return;
         img.write(bytes, i, i + 10);
         document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
+        document.getElementById('swidth').value = img.width;
+        document.getElementById('sheight').value = img.height;
         await new Promise(resolve => setTimeout(resolve, 1));
         i += 10;
       }
