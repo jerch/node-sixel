@@ -33,6 +33,18 @@
   <label><input type="checkbox" name="slow" id="slow" value="value"> Simulate slow chunks</label>
   <br>
   <label><input type="color" name="fillColor" id="fillColor" value="#000000" onchange="redraw()"> background color</label>
+  <br>
+  <label><input type="number" name="dx" id="dx" value="0" onchange="redraw()"> dx</label>
+  <br>
+  <label><input type="number" name="dy" id="dy" value="0" onchange="redraw()"> dy</label>
+  <br>
+  <label><input type="number" name="sx" id="sx" value="0" onchange="redraw()"> sx</label>
+  <br>
+  <label><input type="number" name="sy" id="sy" value="0" onchange="redraw()"> sy</label>
+  <br>
+  <label><input type="number" name="swidth" id="swidth" value="0" onchange="redraw()"> swidth</label>
+  <br>
+  <label><input type="number" name="sheight" id="sheight" value="0" onchange="redraw()"> sheight</label>
   <br><br>
   <span id="stats"></span>
   <br><br>
@@ -59,11 +71,13 @@ function drawImage(img) {
     // target metrics
     target.data, img.width, img.height,
     // dx, dy
-    0, 0,
-    // sx, sy, width, height
-    0, 0, img.width, img.height,
+    parseInt(document.getElementById('dx').value), parseInt(document.getElementById('dy').value),
+    // sx, sy,
+    parseInt(document.getElementById('sx').value), parseInt(document.getElementById('sy').value),
+    // width, height
+    parseInt(document.getElementById('swidth').value), parseInt(document.getElementById('sheight').value),
     // fill color
-    true, sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
+    sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
   ctx.putImageData(target, 0, 0);
 }
 
@@ -94,7 +108,6 @@ async function setImage(s) {
   if (s === 'wiki') {
     start = new Date();
     img.writeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??-#1!14!14!14@');
-    document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
   } else {
     const response = await fetch('/testfiles/' + s);
     const bytes = new Uint8Array(await response.arrayBuffer());
@@ -113,13 +126,15 @@ async function setImage(s) {
       if (bytes.length % 10) {
         img.write(bytes, endTens, bytes.length);
       }
-      document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
       clearInterval(drawHandle);
     } else {
       img.write(bytes);
-      document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
     }
   }
+  document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
+  document.getElementById('swidth').value = img.width;
+  document.getElementById('sheight').value = img.height;
+
 
   console.log('read & conversion time', (new Date()) - start);
 

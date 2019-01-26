@@ -69,7 +69,6 @@ const DEFAULT_COLORS = [
 ];
 
 const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0, 0, 0, 255);
-const HAS_ALPHA = (BIG_ENDIAN) ? 0xFF : 0xFF000000;
 
 // color conversions
 function hue2rgb(p: number, q: number, t: number): number {
@@ -174,7 +173,7 @@ class SixelBand {
     const end = Math.min(this.width, start + length);
     let pixel = 0;
     for (let i = start; i < end; ++i) {
-      if ((pixel = this.data[i * 6 + row]) & HAS_ALPHA) {
+      if (pixel = this.data[i * 6 + row]) {
         target[offset + i] = pixel;
       }
     }
@@ -230,8 +229,7 @@ const enum SixelState {
   DATA = 0,
   COMPRESSION = 1,
   ATTR = 2,
-  COLOR = 3,
-  START = 4   // only used for withESC
+  COLOR = 3
 }
 
 const enum SixelAction {
@@ -270,7 +268,7 @@ export class TransitionTable {
 }
 
 const SIXEL_TABLE = (() => {
-  const table = new TransitionTable(1280); //  5 STATES * 256 codes
+  const table = new TransitionTable(1024); //  4 STATES * 256 codes
   const states: number[] = r(SixelState.DATA, SixelState.COLOR + 1);
   let state: any;
 
@@ -341,7 +339,7 @@ export class SixelImage {
   private _width = 0;
   private _height = 0;
 
-  constructor(public fillColor: RGBA8888 = DEFAULT_BACKGROUND, public fillZero: boolean = true) {}
+  constructor(public fillColor: RGBA8888 = DEFAULT_BACKGROUND) {}
 
   public get height(): number {
     return this._height || this.bands.length * 6;
@@ -482,14 +480,18 @@ export class SixelImage {
    * `target` should be specified with correct `width` and `height`.
    * `dx` and `dy` mark the destination offset.
    * `sx` and `sy` mark the source offset, `swidth` and `sheight` the size to be copied.
-   * With `fillZero` and `fillColor` the default handling of zero pixels can be overwritten.
+   * With `fillColor` the default fill color set in the ctor can be overwritten.
    * Returns the modified `target`.
    */
   public toImageData(
     target: Uint8ClampedArray, width: number, height: number,
     dx: number = 0, dy: number = 0,
     sx: number = 0, sy: number = 0, swidth: number = this.width, sheight: number = this.height,
-    fillZero: boolean = this.fillZero, fillColor: RGBA8888 = this.fillColor): Uint8ClampedArray {
+    fillColor: RGBA8888 = this.fillColor): Uint8ClampedArray
+  {
+    if (dx < 0 || dy < 0 || sx < 0 || sy < 0 || swidth < 0 || sheight < 0) {
+      throw new Error('negative values are invalid');
+    }
     if (width * height * 4 !== target.length) {
       throw new Error('wrong geometry of target');
     }
@@ -501,30 +503,40 @@ export class SixelImage {
       return target;
     }
     // determine copy area
-    const rx = width - dx;
-    const ry = height - dy;
-    swidth = Math.min(swidth, rx, this.width);
-    sheight = Math.min(sheight, ry, this.height);
+    swidth = Math.min(swidth, width - dx, this.width);
+    sheight = Math.min(sheight, height - dy, this.height);
     if (swidth <= 0 || sheight <= 0) {
       return target;
     }
     // copy data on 32 bit values
     const target32 = new Uint32Array(target.buffer);
-    // TODO: limit background filling to actual image clipping area
-    if (fillZero) {
-      target32.fill(fillColor);
-    }
     let p = sy % 6;
     let bandIdx = (sy / 6) | 0;
     let i = 0;
-    while (bandIdx < this.bands.length && bandIdx * 6 + p < sy + sheight) {
+    while (bandIdx < this.bands.length && i < sheight) {
       const offset = (dy + i) * width + dx;
-      this.bands[bandIdx].copyPixelRow(target32, offset, p, sx, swidth);
+      if (fillColor) {
+        const end = offset + swidth;
+        for (let k = offset; k < end; ++k) {
+          target32[k] = fillColor;
+        }
+      }
+      this.bands[bandIdx].copyPixelRow(target32, offset - sx, p, sx, swidth);
       p++;
       i++;
       if (p === 6) {
         bandIdx++;
         p = 0;
+      }
+    }
+    if (fillColor) {
+      while (i < sheight) {
+        const offset = (dy + i) * width + dx;
+        const end = offset + swidth;
+        for (let k = offset; k < end; ++k) {
+          target32[k] = fillColor;
+        }
+        i++;
       }
     }
     return target;
