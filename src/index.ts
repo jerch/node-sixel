@@ -322,38 +322,35 @@ const SIXEL_TABLE = (() => {
  * Note that the class is meant to run behind an escape sequence parser,
  * thus the data should only be the real data part of the sequence and not
  * contain the introducer and the closing bytes.
- * 
- * The constructor takes two optional arguments - `fillZero` and `fillColor`.
- * If `fillZero` is true `fillColor` gets applied to empty pixels. This resembles
- * the zero handling of VT340 and defaults to true. `fillColor` should be set to
- * the current background color of the terminal (defaults to black).
+ * The constructor takes an optional argument `fillColor`. This color gets
+ * applied to non zero pixels later on during `toImageData`.
  */
 export class SixelImage {
-  public initialState = SixelState.DATA;
-  public currentState = this.initialState;
-  public bands: SixelBand[] = [];
-  public params: number[] = [0];
-  public colors: RGBA8888[] = Object.assign([], DEFAULT_COLORS);
-  public currentColor = this.colors[0];
-  public currentBand: SixelBand = null;
+  private _initialState = SixelState.DATA;
+  private _currentState = this._initialState;
+  private _bands: SixelBand[] = [];
+  private _params: number[] = [0];
+  private _colors: RGBA8888[] = Object.assign([], DEFAULT_COLORS);
+  private _currentColor = this._colors[0];
+  private _currentBand: SixelBand = null;
   private _width = 0;
   private _height = 0;
 
   constructor(public fillColor: RGBA8888 = DEFAULT_BACKGROUND) {}
 
   public get height(): number {
-    return this._height || this.bands.length * 6;
+    return this._height || this._bands.length * 6;
   }
 
   public get width(): number {
-    return this._width || Math.max.apply(null, this.bands.map(el => el.width)) | 0;
+    return this._width || Math.max.apply(null, this._bands.map(el => el.width)) | 0;
   }
 
-  public writeString(data: string): void {
-    const bytes = new Uint8Array(data.length);
-    const l = data.length;
-    for (let i = 0; i < l; ++i) {
-      bytes[i] = data.charCodeAt(i);
+  public writeString(data: string, start: number = 0, end: number = data.length): void {
+    const bytes = new Uint8Array(end - start);
+    let j = 0;
+    for (let i = start; i < end; ++i) {
+      bytes[j++] = data.charCodeAt(i);
     }
     this.write(bytes);
   }
@@ -363,11 +360,11 @@ export class SixelImage {
    * Decodes the sixel data and creates the image.
    */
   public write(data: UintTypedArray, start: number = 0, end: number = data.length): void {
-    let currentState = this.currentState;
+    let currentState = this._currentState;
     let dataStart = -1;
-    let band: SixelBand = this.currentBand;
-    let color: RGBA8888 = this.currentColor;
-    let params = this.params;
+    let band: SixelBand = this._currentBand;
+    let color: RGBA8888 = this._currentColor;
+    let params = this._params;
 
     for (let i = start; i < end; ++i) {
       const code = data[i];
@@ -380,7 +377,7 @@ export class SixelImage {
           if (currentState === SixelState.DATA && ~dataStart) {
             if (!band) {
               band = new SixelBand(this.width || 4);
-              this.bands.push(band);
+              this._bands.push(band);
             }
             band.addSixels(data, dataStart, i, color);
           }
@@ -389,7 +386,7 @@ export class SixelImage {
         case SixelAction.repeatedDraw:
           if (!band) {
             band = new SixelBand(this.width || 4);
-            this.bands.push(band);
+            this._bands.push(band);
           }
           let repeat = 0;
           for (let i = 0; i < params.length; ++i) {
@@ -411,7 +408,7 @@ export class SixelImage {
           if (~dataStart) {
             if (!band) {
               band = new SixelBand(this.width || 4);
-              this.bands.push(band);
+              this._bands.push(band);
             }
             band.addSixels(data, dataStart, i, color);
             dataStart = -1;
@@ -424,7 +421,7 @@ export class SixelImage {
           if (~dataStart) {
             if (!band) {
               band = new SixelBand(this.width || 4);
-              this.bands.push(band);
+              this._bands.push(band);
             }
             band.addSixels(data, dataStart, i, color);
             dataStart = -1;
@@ -436,13 +433,13 @@ export class SixelImage {
             if (params.length >= 5) {
               if (params[1] === 1) {
                 // HLS color
-                this.colors[params[0]] = color = normalizeHLS(params[2], params[3], params[4]);
+                this._colors[params[0]] = color = normalizeHLS(params[2], params[3], params[4]);
               } else if (params[1] === 2) {
                 // RGB color
-                this.colors[params[0]] = color = normalizeRGB(params[2], params[3], params[4]);
+                this._colors[params[0]] = color = normalizeRGB(params[2], params[3], params[4]);
               }
             } else if (params.length === 1) {
-              color = this.colors[params[0]] || this.colors[0];
+              color = this._colors[params[0]] || this._colors[0];
             }
           } else if (currentState === SixelState.ATTR) {
             // we only use width and height
@@ -463,16 +460,16 @@ export class SixelImage {
     if (currentState === SixelState.DATA && ~dataStart) {
       if (!band) {
         band = new SixelBand(this.width || 4);
-        this.bands.push(band);
+        this._bands.push(band);
       }
       band.addSixels(data, dataStart, end, color);
     }
     
     // save state and buffers
-    this.currentState = currentState;
-    this.currentColor = color;
-    this.params = params;
-    this.currentBand = band;
+    this._currentState = currentState;
+    this._currentColor = color;
+    this._params = params;
+    this._currentBand = band;
   }
 
   /**
@@ -513,7 +510,7 @@ export class SixelImage {
     let p = sy % 6;
     let bandIdx = (sy / 6) | 0;
     let i = 0;
-    while (bandIdx < this.bands.length && i < sheight) {
+    while (bandIdx < this._bands.length && i < sheight) {
       const offset = (dy + i) * width + dx;
       if (fillColor) {
         const end = offset + swidth;
@@ -521,7 +518,7 @@ export class SixelImage {
           target32[k] = fillColor;
         }
       }
-      this.bands[bandIdx].copyPixelRow(target32, offset - sx, p, sx, swidth);
+      this._bands[bandIdx].copyPixelRow(target32, offset - sx, p, sx, swidth);
       p++;
       i++;
       if (p === 6) {
