@@ -313,7 +313,6 @@ const SIXEL_TABLE = (() => {
 /**
  * Sixel image class.
  * 
- * Create an image from sixel data with `SixelImage.fromData`.
  * The class provides image attributes `width` and `height`.
  * With `toImageData` the pixel data can be copied to an `ImageData`
  * for further processing.
