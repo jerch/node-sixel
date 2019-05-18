@@ -3,7 +3,7 @@
  * The resulting word order depends on the system endianess:
  *    big endian    - RGBA32
  *    bittle endian - ABGR32
- * 
+ *
  * Use `toRGBA8888` and `fromRGBA8888` to convert the color values
  * respecting the system endianess.
  */
@@ -14,7 +14,7 @@ export type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
 const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
 
 export function toRGBA8888(r: number, g: number, b: number, a: number): RGBA8888 {
-  return (BIG_ENDIAN) 
+  return (BIG_ENDIAN)
     ? (r & 0xFF) << 24 | (g & 0xFF) << 16 | (b % 0xFF) << 8 | (a & 0xFF)    // RGBA32
     : (a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF);   // ABGR32
 }
@@ -27,7 +27,7 @@ export function fromRGBA8888(color: RGBA8888): number[] {
 
 /**
  * 16 predefined color registers of VT340
- * 
+ *
  * taken from https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
  * Table 2-3 VT340 Default Color Map Map Location  Default Color
  * * These colors are less saturated than colors 1 through 6.
@@ -65,7 +65,7 @@ const DEFAULT_COLORS = [
   normalizeRGB(60, 33, 60),
   normalizeRGB(33, 60, 60),
   normalizeRGB(60, 60, 33),
-  normalizeRGB(80, 80, 80),
+  normalizeRGB(80, 80, 80)
 ];
 
 const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0, 0, 0, 255);
@@ -82,20 +82,20 @@ function hue2rgb(p: number, q: number, t: number): number {
 
 function hlsToRgb(h: number, l: number, s: number): RGBA8888 {
   let r;
-  let g
+  let g;
   let b;
 
-  if (s == 0) {
+  if (s === 0) {
     r = g = b = l;
   } else {
-    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    var p = 2 * l - q;
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
     r = hue2rgb(p, q, h + 1 / 3);
     g = hue2rgb(p, q, h);
     b = hue2rgb(p, q, h - 1 / 3);
   }
 
-  return (BIG_ENDIAN) 
+  return (BIG_ENDIAN)
     ? Math.round(r * 255) << 24 | Math.round(g * 255) << 16 | Math.round(b * 255) << 8 | 0xFF   // RGBA32
     : 0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255);  // ABGR32
 }
@@ -160,7 +160,7 @@ class SixelBand {
   /**
    * Carriage return.
    */
-  public CR(): void {
+  public cr(): void {
     this._cursor = 0;
   }
 
@@ -183,7 +183,7 @@ class SixelBand {
 
 /**
  * Parser:
- * 
+ *
  * STATE          MEANING                   ACTION                    NEXT STATE
  * DATA
  *    63 - 126    data bytes                draw                      DATA
@@ -193,13 +193,13 @@ class SixelBand {
  *    36 $        carriage return           cr                        DATA
  *    45 -        line feed                 lf                        DATA
  *    other                                 ignore                    DATA
- *    
+ *
  * COMPRESSION
  *    48 - 57     digits                    store param               COMPRESSION
  *    63 - 126    data bytes                repeated draw             DATA
  *    33 !        compression               shift param               COMPRESSION
  *    other                                 ignore                    COMPRESSION
- * 
+ *
  * ATTR
  *    48 - 57     digits                    store param               ATTR
  *    59 ;        param separator           shift param               ATTR
@@ -210,7 +210,7 @@ class SixelBand {
  *    36 $        carriage return           apply param(ATTR)         DATA
  *    45 -        line feed                 apply param(ATTR)         DATA
  *    other                                 ignore                    ATTR
- * 
+ *
  * COLOR
  *    48 - 57     digits                    store param               COLOR
  *    59 ;        param separator           shift param               COLOR
@@ -221,7 +221,7 @@ class SixelBand {
  *    36 $        carriage return           apply param(COLOR)        DATA
  *    45 -        line feed                 apply param(COLOR)        DATA
  *    other                                 ignore                    COLOR
- * 
+ *
  * * need to draw here (inspect next state)
  */
 
@@ -233,14 +233,14 @@ const enum SixelState {
 }
 
 const enum SixelAction {
-  ignore = 0,
-  draw = 1,
-  cr = 2,
-  lf = 3,
-  repeatedDraw = 4,
-  storeParam = 5,
-  shiftParam = 6,
-  applyParam = 7
+  IGNORE = 0,
+  DRAW = 1,
+  CR = 2,
+  LF = 3,
+  REPEATED_DRAW = 4,
+  STORE_PARAM = 5,
+  SHIFT_PARAM = 6,
+  APPLY_PARAM = 7
 }
 
 function r(low: number, high: number): number[] {
@@ -275,44 +275,44 @@ const SIXEL_TABLE = (() => {
   // default transition for all states
   for (state in states) {
     // Note: ignore never changes state
-    table.addMany(r(0x00, 0x80), state, SixelAction.ignore, state);
+    table.addMany(r(0x00, 0x80), state, SixelAction.IGNORE, state);
   }
   // DATA state
-  table.addMany(r(63, 127), SixelState.DATA, SixelAction.draw, SixelState.DATA);
-  table.add(33, SixelState.DATA, SixelAction.ignore, SixelState.COMPRESSION);
-  table.add(34, SixelState.DATA, SixelAction.ignore, SixelState.ATTR);
-  table.add(35, SixelState.DATA, SixelAction.ignore, SixelState.COLOR);
-  table.add(36, SixelState.DATA, SixelAction.cr, SixelState.DATA);
-  table.add(45, SixelState.DATA, SixelAction.lf, SixelState.DATA);
+  table.addMany(r(63, 127), SixelState.DATA, SixelAction.DRAW, SixelState.DATA);
+  table.add(33, SixelState.DATA, SixelAction.IGNORE, SixelState.COMPRESSION);
+  table.add(34, SixelState.DATA, SixelAction.IGNORE, SixelState.ATTR);
+  table.add(35, SixelState.DATA, SixelAction.IGNORE, SixelState.COLOR);
+  table.add(36, SixelState.DATA, SixelAction.CR, SixelState.DATA);
+  table.add(45, SixelState.DATA, SixelAction.LF, SixelState.DATA);
   // COMPRESSION
-  table.addMany(r(48, 58), SixelState.COMPRESSION, SixelAction.storeParam, SixelState.COMPRESSION);
-  table.addMany(r(63, 127), SixelState.COMPRESSION, SixelAction.repeatedDraw, SixelState.DATA);
-  table.add(33, SixelState.COMPRESSION, SixelAction.shiftParam, SixelState.COMPRESSION);
+  table.addMany(r(48, 58), SixelState.COMPRESSION, SixelAction.STORE_PARAM, SixelState.COMPRESSION);
+  table.addMany(r(63, 127), SixelState.COMPRESSION, SixelAction.REPEATED_DRAW, SixelState.DATA);
+  table.add(33, SixelState.COMPRESSION, SixelAction.SHIFT_PARAM, SixelState.COMPRESSION);
   // ATTR
-  table.addMany(r(48, 58), SixelState.ATTR, SixelAction.storeParam, SixelState.ATTR);
-  table.add(59, SixelState.ATTR, SixelAction.shiftParam, SixelState.ATTR);
-  table.addMany(r(63, 127), SixelState.ATTR, SixelAction.applyParam, SixelState.DATA);
-  table.add(33, SixelState.ATTR, SixelAction.applyParam, SixelState.COMPRESSION);
-  table.add(34, SixelState.ATTR, SixelAction.applyParam, SixelState.ATTR);
-  table.add(35, SixelState.ATTR, SixelAction.applyParam, SixelState.COLOR);
-  table.add(36, SixelState.ATTR, SixelAction.applyParam, SixelState.DATA);
-  table.add(45, SixelState.ATTR, SixelAction.applyParam, SixelState.DATA);
+  table.addMany(r(48, 58), SixelState.ATTR, SixelAction.STORE_PARAM, SixelState.ATTR);
+  table.add(59, SixelState.ATTR, SixelAction.SHIFT_PARAM, SixelState.ATTR);
+  table.addMany(r(63, 127), SixelState.ATTR, SixelAction.APPLY_PARAM, SixelState.DATA);
+  table.add(33, SixelState.ATTR, SixelAction.APPLY_PARAM, SixelState.COMPRESSION);
+  table.add(34, SixelState.ATTR, SixelAction.APPLY_PARAM, SixelState.ATTR);
+  table.add(35, SixelState.ATTR, SixelAction.APPLY_PARAM, SixelState.COLOR);
+  table.add(36, SixelState.ATTR, SixelAction.APPLY_PARAM, SixelState.DATA);
+  table.add(45, SixelState.ATTR, SixelAction.APPLY_PARAM, SixelState.DATA);
   // COLOR
-  table.addMany(r(48, 58), SixelState.COLOR, SixelAction.storeParam, SixelState.COLOR);
-  table.add(59, SixelState.COLOR, SixelAction.shiftParam, SixelState.COLOR);
-  table.addMany(r(63, 127), SixelState.COLOR, SixelAction.applyParam, SixelState.DATA);
-  table.add(33, SixelState.COLOR, SixelAction.applyParam, SixelState.COMPRESSION);
-  table.add(34, SixelState.COLOR, SixelAction.applyParam, SixelState.ATTR);
-  table.add(35, SixelState.COLOR, SixelAction.applyParam, SixelState.COLOR);
-  table.add(36, SixelState.COLOR, SixelAction.applyParam, SixelState.DATA);
-  table.add(45, SixelState.COLOR, SixelAction.applyParam, SixelState.DATA);
+  table.addMany(r(48, 58), SixelState.COLOR, SixelAction.STORE_PARAM, SixelState.COLOR);
+  table.add(59, SixelState.COLOR, SixelAction.SHIFT_PARAM, SixelState.COLOR);
+  table.addMany(r(63, 127), SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.DATA);
+  table.add(33, SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.COMPRESSION);
+  table.add(34, SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.ATTR);
+  table.add(35, SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.COLOR);
+  table.add(36, SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.DATA);
+  table.add(45, SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.DATA);
   return table;
 })();
 
 
 /**
  * Sixel image class.
- * 
+ *
  * The class provides image attributes `width` and `height`.
  * With `toImageData` the pixel data can be copied to an `ImageData`
  * for further processing.
@@ -369,10 +369,10 @@ export class SixelImage {
       const code = data[i];
       const transition = SIXEL_TABLE.table[currentState << 8 | (code < 0x7F ? code : 0xFF)];
       switch (transition >> 4) {
-        case SixelAction.draw:
+        case SixelAction.DRAW:
           dataStart = (~dataStart) ? dataStart : i;
           break;
-        case SixelAction.ignore:
+        case SixelAction.IGNORE:
           if (currentState === SixelState.DATA && ~dataStart) {
             if (!band) {
               band = new SixelBand(this.width || 4);
@@ -382,7 +382,7 @@ export class SixelImage {
           }
           dataStart = -1;
           break;
-        case SixelAction.repeatedDraw:
+        case SixelAction.REPEATED_DRAW:
           if (!band) {
             band = new SixelBand(this.width || 4);
             this._bands.push(band);
@@ -397,13 +397,13 @@ export class SixelImage {
           dataStart = -1;
           params = [0];
           break;
-        case SixelAction.storeParam:
+        case SixelAction.STORE_PARAM:
           params[params.length - 1] = params[params.length - 1] * 10 + code - 48;
           break;
-        case SixelAction.shiftParam:
+        case SixelAction.SHIFT_PARAM:
           params.push(0);
           break;
-        case SixelAction.cr:
+        case SixelAction.CR:
           if (~dataStart) {
             if (!band) {
               band = new SixelBand(this.width || 4);
@@ -413,10 +413,10 @@ export class SixelImage {
             dataStart = -1;
           }
           if (band) {
-            band.CR();
+            band.cr();
           }
           break;
-        case SixelAction.lf:
+        case SixelAction.LF:
           if (~dataStart) {
             if (!band) {
               band = new SixelBand(this.width || 4);
@@ -427,7 +427,7 @@ export class SixelImage {
           }
           band = null;
           break;
-        case SixelAction.applyParam:
+        case SixelAction.APPLY_PARAM:
           if (currentState === SixelState.COLOR) {
             if (params.length >= 5) {
               if (params[1] === 1) {
@@ -463,7 +463,7 @@ export class SixelImage {
       }
       band.addSixels(data, dataStart, end, color);
     }
-    
+
     // save state and buffers
     this._currentState = currentState;
     this._currentColor = color;
