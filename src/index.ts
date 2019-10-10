@@ -440,7 +440,7 @@ function r(low: number, high: number): number[] {
   return arr;
 }
 
-export class TransitionTable {
+class TransitionTable {
   public table: Uint8Array;
   constructor(length: number) {
     this.table = new Uint8Array(length);
