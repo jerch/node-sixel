@@ -1,28 +1,69 @@
 /**
  * This type denotes the byte order for 32 bit color values.
  * The resulting word order depends on the system endianess:
- *    big endian    - RGBA32
- *    bittle endian - ABGR32
+ *  - big endian    - RGBA32
+ *  - bittle endian - ABGR32
  *
  * Use `toRGBA8888` and `fromRGBA8888` to convert the color values
  * respecting the system endianess.
  */
 export type RGBA8888 = number;
 export type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
+export type HistogramType = Map<RGBA8888, number>;
+export type RGBColor = [number, number, number];
 
 /** system endianess */
 const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
 
-export function toRGBA8888(r: number, g: number, b: number, a: number): RGBA8888 {
+function red(n: RGBA8888): number {
+  return (BIG_ENDIAN ? n >>> 24 : n) & 0xFF;
+}
+
+function green(n: RGBA8888): number {
+  return (BIG_ENDIAN ? n >>> 16 : n >>> 8) & 0xFF;
+}
+
+function blue(n: RGBA8888): number {
+  return (BIG_ENDIAN ? n >>> 8 : n >>> 16) & 0xFF;
+}
+
+function alpha(n: RGBA8888): number {
+  return (BIG_ENDIAN ? n : n >>> 24) & 0xFF;
+}
+
+export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RGBA8888 {
   return (BIG_ENDIAN)
-    ? (r & 0xFF) << 24 | (g & 0xFF) << 16 | (b % 0xFF) << 8 | (a & 0xFF)    // RGBA32
-    : (a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF);   // ABGR32
+    ? ((r & 0xFF) << 24 | (g & 0xFF) << 16 | (b % 0xFF) << 8 | (a & 0xFF)) >>> 0    // RGBA32
+    : ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
 }
 
 export function fromRGBA8888(color: RGBA8888): number[] {
   return (BIG_ENDIAN)
-    ? [color >> 24, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]
-    : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >> 24];
+    ? [color >>> 24, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]
+    : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >>> 24];
+}
+
+function nearestColorIdx(color: RGBA8888, palette: RGBColor[]): number {
+  const r = red(color);
+  const g = green(color);
+  const b = blue(color);
+  
+  let min = Number.MAX_SAFE_INTEGER;
+  let idx = -1;
+
+  // use euclidean distance (manhattan gives very poor results)
+  for (let i = 0; i < palette.length; ++i) {
+    const dr = r - palette[i][0];
+    const dg = g - palette[i][1];
+    const db = b - palette[i][2];
+    const d = dr * dr + dg * dg + db * db;
+    if (d < min) {
+      min = d;
+      idx = i;
+    }
+  }
+
+  return idx;
 }
 
 /**
@@ -111,6 +152,26 @@ function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
   return hlsToRgb((h + 240) / 360 - 1, l / 100, s / 100);
 }
 
+// helper to write a decimal number to a typed array in a speedy fashion
+const numStack = new Uint8Array(20);
+function numToDigits(n: number, target: Uint8Array, pos: number): number {
+  n >>>= 0;
+  let c = 0;
+  while (n) {
+    numStack[c] = n % 10 + 48;
+    n = Math.floor(n / 10);
+    c++;
+  }
+  if (!c) {
+    numStack[c] = 48;
+    c++;
+  }
+  while (c) {
+    target[pos++] = numStack[--c];
+  }
+  return pos;
+}
+
 
 /**
  * Class to hold a single sixel band.
@@ -177,6 +238,133 @@ class SixelBand {
         target[offset + i] = pixel;
       }
     }
+  }
+
+  public insertPixelRow(source: Uint32Array, yStart: number, length: number, colorMap: Map<RGBA8888, number>): void {
+    const start = yStart * length;
+    let c = 0;
+    for (let i = 0; i < length; ++i) {
+      const pos = start + i;
+      this.data[c++] = colorMap.get(source[pos]);
+      this.data[c++] = colorMap.get(source[pos + length * 1]);
+      this.data[c++] = colorMap.get(source[pos + length * 2]);
+      this.data[c++] = colorMap.get(source[pos + length * 3]);
+      this.data[c++] = colorMap.get(source[pos + length * 4]);
+      this.data[c++] = colorMap.get(source[pos + length * 5]);
+    }
+  }
+
+  public insertPixelRowLast(
+    source: Uint32Array, yStart: number, length: number,
+    colorMap: Map<RGBA8888, number>,
+    bandHeight: number): void
+  {
+    const start = yStart * length;
+    let c = 0;
+    switch (bandHeight) {
+      case 5:
+        for (let i = 0; i < length; ++i) {
+          const pos = start + i;
+          this.data[c++] = colorMap.get(source[pos]);
+          this.data[c++] = colorMap.get(source[pos + length * 1]);
+          this.data[c++] = colorMap.get(source[pos + length * 2]);
+          this.data[c++] = colorMap.get(source[pos + length * 3]);
+          this.data[c++] = colorMap.get(source[pos + length * 4]);
+          c++;
+        }
+        break;
+      case 4:
+        for (let i = 0; i < length; ++i) {
+          const pos = start + i;
+          this.data[c++] = colorMap.get(source[pos]);
+          this.data[c++] = colorMap.get(source[pos + length * 1]);
+          this.data[c++] = colorMap.get(source[pos + length * 2]);
+          this.data[c++] = colorMap.get(source[pos + length * 3]);
+          c += 2;
+        }
+        break;
+      case 3:
+        for (let i = 0; i < length; ++i) {
+          const pos = start + i;
+          this.data[c++] = colorMap.get(source[pos]);
+          this.data[c++] = colorMap.get(source[pos + length * 1]);
+          this.data[c++] = colorMap.get(source[pos + length * 2]);
+          c += 3;
+        }
+        break;
+      case 2:
+        for (let i = 0; i < length; ++i) {
+          const pos = start + i;
+          this.data[c++] = colorMap.get(source[pos]);
+          this.data[c++] = colorMap.get(source[pos + length * 1]);
+          c += 4;
+        }
+        break;
+      case 1:
+        for (let i = 0; i < length; ++i) {
+          this.data[c++] = colorMap.get(source[start + i]);
+          c += 5;
+        }
+        break;
+    }
+  }
+
+  public get colors(): Set<number> {
+    // read only up to with * 6 (data.length might be longer due to 2^x growing)
+    const end = this.width * 6;
+    const result = new Set<number>();
+    for (let pixel = 0; pixel < end; ++pixel) {
+      result.add(this.data[pixel]);
+    }
+    return result;
+  }
+
+  public get histogram(): HistogramType {
+    // read only up to with * 6 (data.length might be longer due to 2^x growing)
+    const end = this.width * 6;
+    const result = new Map<RGBA8888, number>();
+    for (let pixel = 0; pixel < end; ++pixel) {
+      const color = this.data[pixel];
+      result.set(color, (result.get(color) || 0) + 1);
+    }
+    return result;
+  }
+
+  public colorToSixelRow(color: RGBA8888, target: Uint8Array, pos: number): number {
+    const end = this.width * 6;
+    let lastCode = -1;
+    let accu = 1;
+    for (let cursor = 0; cursor < end; cursor += 6) {
+      let code = 0;
+      for (let p = 0; p < 6; ++p) {
+        if (this.data[cursor + p] === color) {
+          code |= 1 << p;
+        }
+      }
+      if (code === lastCode) {
+        accu++;
+      } else {
+        pos = this._codeToSixel(lastCode, accu, target, pos);
+        lastCode = code;
+        accu = 1;
+      }
+    }
+    pos = this._codeToSixel(lastCode, accu, target, pos);
+    return pos;
+  }
+
+  private _codeToSixel(code: number, repeat: number, target: Uint8Array, pos: number): number {
+    code += 63;
+    if (repeat > 3) {
+      target[pos++] = 33; '!'
+      pos = numToDigits(repeat, target, pos);
+      target[pos++] = code;
+    } else {
+      while (repeat--) {
+        target[pos++] = code;
+      }
+    }
+    return pos;
   }
 }
 
@@ -316,24 +504,138 @@ const SIXEL_TABLE = (() => {
  * The class provides image attributes `width` and `height`.
  * With `toImageData` the pixel data can be copied to an `ImageData`
  * for further processing.
- * `write` and `writeString` decode the data streamlined, therefore it
+ * 
+ * `write` and `writeString` decode SIXEL data streamlined, therefore it
  * is possible to grab partial images during transmission.
  * Note that the class is meant to run behind an escape sequence parser,
  * thus the data should only be the real data part of the sequence and not
- * contain the introducer and the closing bytes.
+ * contain the introducer and finalizer.
  * The constructor takes an optional argument `fillColor`. This color gets
  * applied to non zero pixels later on during `toImageData`.
+ * 
+ * With the class method `fromImageData` it is possible to create an instance
+ * from existing image data.
+ * 
+ * `toSixelBytes` encodes the image information to SIXEL in byte chunks.
+ * `toSixelString` encodes the image to SIXEL in string representation
+ * (use with care for big images).
  */
 export class SixelImage {
+  /**
+   * Create escape sequence introducer for SIXEL.
+   * Should be written to the terminal before any SIXEL data.
+   * 
+   * A SIXEL DSC sequence understands 3 parameters, but only the second one (background select) is supported
+   * by some terminals. Therefore only this parameter is exposed.
+   * 
+   * backgroundSelect:
+   *  - 0   device default action (most terminals will apply background color)
+   *  - 1   no action (no change to zero bit value grid positions)
+   *  - 2   set to background color - zero bit value grid positions are set to background color (device dependent).
+   * 
+   * @see https://www.vt100.net/docs/vt3xx-gp/chapter14.html
+   * @param backgroundSelect background color setting (default = 0)
+   */
+  public static introducer(backgroundSelect: number = 0): string {
+    return `\x1bP0;${backgroundSelect};q`;
+  }
+
+  /**
+   * Finalize SIXEL sequence. Write this, when the SIXEL data stream has ended to restore
+   * the terminal to normal operation.
+   */
+  public static finalizer(): string {
+    return '\x1b\\';
+  }
+
+  /**
+   * Inspect all colors and generate palette replacement mapping.
+   * Respects alpha 0 as transparent, other alpha values are stripped.
+   */
+  private static _genColorMap(data32: Uint32Array, palette: RGBA8888[] | RGBColor[]): Map<RGBA8888, RGBA8888> {
+    if (!palette.length) {
+      throw new Error('palette must not be empty');
+    }
+    const colorMap = new Map<RGBA8888, RGBA8888>();
+    const paletteWithZero = (typeof palette[0] === 'number')
+      ? (palette as RGBA8888[]).slice()
+      : (palette as RGBColor[]).map(v => toRGBA8888(v[0], v[1], v[2]));
+    paletteWithZero.unshift(0);
+    const rgbPalette = (typeof palette[0] === 'number')
+      ? (palette as RGBA8888[]).map(v => fromRGBA8888(v).slice(0, -1) as RGBColor)
+      : (palette as RGBColor[]).slice();
+    for (let i = 0; i < data32.length; ++i) {
+      const color = data32[i];
+      if (!colorMap.has(color)) {
+        // 0 for transparent, others are shifted by 1
+        colorMap.set(color, alpha(color) ? paletteWithZero[nearestColorIdx(color, rgbPalette) + 1] : 0);
+      }
+    }
+    return colorMap;
+  }
+
+  /**
+   * Create SixelImage from image pixel data (alternative constructor).
+   * 
+   * The colors of the sixel image get aligned to the given palette (defaults to 16 colors of VT340)
+   * by euclidean distance without further image processing. Without proper quantization beforehand
+   * this leads to poor output, thus consider using a quantizer with custom palette creation and dithering.  
+   * For transparency only an alpha value of 0 will be respected as fully transparent,
+   * other alpha values are set to fully opaque (255). Transparent pixels will be colored by the
+   * terminal later on depending on the `backgroundSelect` setting of the introducer.
+   * 
+   * @param data    pixel data
+   * @param width   width of the image
+   * @param height  height of the image
+   * @param palette optional, palette to be applied
+   */
+  public static fromImageData(
+    data: Uint8ClampedArray | Uint8Array, width: number, height: number,
+    palette: RGBA8888[] | RGBColor[] = DEFAULT_COLORS): SixelImage
+  {
+
+    // TODO: perf opt - allow skipping palette recoloring for safe inputs (directly from quantizer)
+
+    if (width * height * 4 !== data.length) {
+      throw new Error('wrong geometry of data');
+    }
+    const data32 = new Uint32Array(data.buffer);
+    const colorMap = this._genColorMap(data32, palette);
+    const img = new SixelImage();
+    img._width = width;
+    img._height = height;
+
+    // full 6 pixel bands
+    const fullBands = Math.floor(height / 6);
+    for (let b = 0; b < fullBands; ++b) {
+      const band = new SixelBand(width);
+      band.width = width;
+      img._bands.push(band);
+      band.insertPixelRow(data32, b * 6, width, colorMap);
+    }
+
+    // underfull last band
+    const fullHeight = fullBands * 6;
+    if (fullHeight < height) {
+      const band = new SixelBand(width);
+      band.width = width;
+      img._bands.push(band);
+      band.insertPixelRowLast(data32, fullHeight, width, colorMap, height - fullHeight);
+    }
+
+    return img; 
+  }
+
   private _initialState = SixelState.DATA;
   private _currentState = this._initialState;
-  private _bands: SixelBand[] = [];
+  public _bands: SixelBand[] = [];
   private _params: number[] = [0];
   private _colors: RGBA8888[] = Object.assign([], DEFAULT_COLORS);
   private _currentColor = this._colors[0];
   private _currentBand: SixelBand = null;
   private _width = 0;
   private _height = 0;
+  private _chunk: Uint8Array;
 
   constructor(public fillColor: RGBA8888 = DEFAULT_BACKGROUND) {}
 
@@ -345,6 +647,9 @@ export class SixelImage {
     return this._width || Math.max.apply(null, this._bands.map(el => el.width)) | 0;
   }
 
+  /**
+   * Write SIXEL string data to the image.
+   */
   public writeString(data: string, start: number = 0, end: number = data.length): void {
     const bytes = new Uint8Array(end - start);
     let j = 0;
@@ -355,8 +660,7 @@ export class SixelImage {
   }
 
   /**
-   * Write sixel data to the image.
-   * Decodes the sixel data and creates the image.
+   * Write SIXEL bytes to the image.
    */
   public write(data: UintTypedArray, start: number = 0, end: number = data.length): void {
     let currentState = this._currentState;
@@ -536,5 +840,124 @@ export class SixelImage {
       }
     }
     return target;
+  }
+
+  /**
+   * Output image as chunks of SIXEL bytes.
+   * 
+   * `cb` will be called with the current SIXEL data in `chunk` until the whole image
+   * was transmitted. `chunk` is borrowed, thus the data should be copied/written right away.
+   * 
+   * Note: The output contains only the SIXEL image data (no escape sequence introducer / finalizer).
+   * 
+   * @param cb  callback to process a single SIXEL chunk (borrowed)
+   */
+  public toSixelBytes(cb: (chunk: Uint8Array) => void): void {
+    // prepare chunk buffer
+    if (!this._chunk || this._chunk.length < this.width + 100) {
+      this._chunk = new Uint8Array(this.width + 100);
+    }
+
+    // get colors of image
+    // Note: we cannot simply rely on `_colors` here since entries
+    // might have changed during writing.
+    const imageColors = new Set<RGBA8888>();
+    const bandColors: Set<RGBA8888>[] = [];
+    for (let i = 0; i < this._bands.length; ++i) {
+      const colors = this._bands[i].colors;
+      bandColors.push(colors);
+      for (let color of colors) {
+        imageColors.add(color);
+      }
+    }
+
+    // translate RGBA8888 colors to [R, G, B, A]
+    const rgbColors = new Map<RGBA8888, number[]>();
+    for (let color of imageColors) {
+      rgbColors.set(color, fromRGBA8888(color));
+    }
+
+    /**
+     * create SIXEL data stream
+     */
+    // write position in chunk buffer
+    let pos = 0;
+
+    // write raster attributes (includes image dimensions) - " Pan ; Pad ; Ph ; Pv
+    // note: Pan/Pad are set to dummies (not eval'd by any terminal)
+    this._chunk[pos++] = 34; '"'
+    this._chunk[pos++] = 49; '1'
+    this._chunk[pos++] = 59; ';'
+    this._chunk[pos++] = 49; '1'
+    this._chunk[pos++] = 59; ';'
+    pos = numToDigits(this.width, this._chunk, pos);
+    this._chunk[pos++] = 59; ';'
+    pos = numToDigits(this.height, this._chunk, pos);
+    this._chunk[pos++] = 10; '\n'
+    cb(this._chunk.subarray(0, pos));
+    pos = 0;
+    
+    // create palette and write color entries
+    // note: we simply push all found colors into the palette
+    // thus do not ensure a certain palette size here
+    const positionInPalette = new Map<RGBA8888, number>();
+    let count = 0;
+    for (let [color, [r, g, b, a]] of rgbColors) {
+      if (a) {
+        positionInPalette.set(color, count);
+        this._chunk[pos++] = 35; '#'
+        pos = numToDigits(count++, this._chunk, pos);
+        this._chunk[pos++] = 59; ';'
+        this._chunk[pos++] = 50; '2'
+        this._chunk[pos++] = 59; ';'
+        pos = numToDigits(Math.round(r / 255 * 100), this._chunk, pos);
+        this._chunk[pos++] = 59; ';'
+        pos = numToDigits(Math.round(g / 255 * 100), this._chunk, pos);
+        this._chunk[pos++] = 59; ';'
+        pos = numToDigits(Math.round(b / 255 * 100), this._chunk, pos);
+        this._chunk[pos++] = 10; '\n'
+        cb(this._chunk.subarray(0, pos));
+        pos = 0;
+      }
+    }
+
+    // write data for each color of all bands
+    // skips color entries with alpha 0 ("holey pixels" - to be colored by `backgroundSelect`)
+    for (let i = 0; i < this._bands.length; ++i) {
+      const colors = bandColors[i];
+      const colorsArray = Array.from(colors).filter(el => !!rgbColors.get(el)[3]);
+      for (let j = 0; j < colorsArray.length; ++j) {
+        this._chunk[pos++] = 35; '#'
+        pos = numToDigits(positionInPalette.get(colorsArray[j]), this._chunk, pos);
+        pos = this._bands[i].colorToSixelRow(colorsArray[j], this._chunk, pos);
+        if (j < colorsArray.length - 1) {
+          this._chunk[pos++] = 36; '$'
+          cb(this._chunk.subarray(0, pos));
+          pos = 0;
+        }
+      }
+      if (i < this._bands.length - 1) {
+        this._chunk[pos++] = 45; '-'
+        this._chunk[pos++] = 10; '\n'
+        cb(this._chunk.subarray(0, pos));
+        pos = 0;
+      }
+    }
+    if (pos) {
+      cb(this._chunk.subarray(0, pos));
+      pos = 0;
+    }
+  }
+
+  /**
+   * Output image as SIXEL string.
+   * Use with care for big images (the string might grow very big).
+   * 
+   * Note: The output contains only the SIXEL image data (no escape sequence introducer / finalizer).
+   */
+  public toSixelString(): string {
+    let result: string[] = [];
+    this.toSixelBytes(chunk => result.push(String.fromCharCode.apply(null, chunk)));
+    return result.join('');
   }
 }
