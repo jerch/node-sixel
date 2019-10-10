@@ -1,6 +1,6 @@
 {
   "name": "sixel",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Sixel image format for node and browser.",
   "main": "./lib/index.js",
   "scripts": {
@@ -9,7 +9,8 @@
     "tsc": "tsc",
     "watch": "tsc -w",
     "lint": "tslint 'src/**/*.ts'",
-    "start": "webpack-cli && http-server"
+    "start": "webpack-cli && http-server",
+    "prepublish": "npm run tsc"
   },
   "keywords": [
     "sixel",
@@ -19,19 +20,19 @@
   "author": "Joerg Breitbart <j.breitbart@netzkolchose.de>",
   "license": "MIT",
   "dependencies": {
-    "@types/chai": "^4.1.7",
-    "@types/mocha": "^5.2.5",
-    "@types/node": "^10.12.18",
-    "chai": "^4.2.0",
-    "mocha": "^5.2.0",
-    "tslint": "^5.12.1"
+    "@types/node": "^10.12.18"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.3",
+    "@types/mocha": "^5.2.7",
     "canvas": "^2.6.0",
+    "chai": "^4.2.0",
     "http-server": "^0.11.1",
+    "mocha": "^5.2.0",
     "open": "^6.4.0",
     "rgbquant": "^1.1.2",
     "ts-loader": "^5.3.3",
+    "tslint": "^5.20.0",
     "typescript": "^3.2.4",
     "webpack": "^4.29.0",
     "webpack-cli": "^3.2.1"
