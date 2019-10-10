@@ -1,10 +1,9 @@
 {
   "name": "sixel",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Sixel image format for node and browser.",
   "main": "./lib/index.js",
   "scripts": {
-    "install": "tsc",
     "test": "mocha lib/*.test.js",
     "tsc": "tsc",
     "watch": "tsc -w",
