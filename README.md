@@ -1,12 +1,15 @@
 ## Sixel images in Javascript.
 
-To run the test page:
+See the example files for decoding/encoding in nodejs.
+
+Decoding can also be tested in the browser:
 ```
 npm install
 npm start
 ```
-and open in the browser `localhost:8080`.
+and open `localhost:8080`.
 
-TODO:
+### TODO:
 - tests
 - optimizations
+- more docs
