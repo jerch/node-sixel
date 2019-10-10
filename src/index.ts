@@ -885,15 +885,15 @@ export class SixelImage {
 
     // write raster attributes (includes image dimensions) - " Pan ; Pad ; Ph ; Pv
     // note: Pan/Pad are set to dummies (not eval'd by any terminal)
-    this._chunk[pos++] = 34; '"'
-    this._chunk[pos++] = 49; '1'
-    this._chunk[pos++] = 59; ';'
-    this._chunk[pos++] = 49; '1'
-    this._chunk[pos++] = 59; ';'
+    this._chunk[pos++] = 34; // "
+    this._chunk[pos++] = 49; // 1
+    this._chunk[pos++] = 59; // ;
+    this._chunk[pos++] = 49; // 1
+    this._chunk[pos++] = 59; // ;
     pos = numToDigits(this.width, this._chunk, pos);
-    this._chunk[pos++] = 59; ';'
+    this._chunk[pos++] = 59; // ;
     pos = numToDigits(this.height, this._chunk, pos);
-    this._chunk[pos++] = 10; '\n'
+    this._chunk[pos++] = 10; // \n
     cb(this._chunk.subarray(0, pos));
     pos = 0;
     
@@ -905,17 +905,17 @@ export class SixelImage {
     for (let [color, [r, g, b, a]] of rgbColors) {
       if (a) {
         positionInPalette.set(color, count);
-        this._chunk[pos++] = 35; '#'
+        this._chunk[pos++] = 35; // #
         pos = numToDigits(count++, this._chunk, pos);
-        this._chunk[pos++] = 59; ';'
-        this._chunk[pos++] = 50; '2'
-        this._chunk[pos++] = 59; ';'
+        this._chunk[pos++] = 59; // ;
+        this._chunk[pos++] = 50; // 2
+        this._chunk[pos++] = 59; // ;
         pos = numToDigits(Math.round(r / 255 * 100), this._chunk, pos);
-        this._chunk[pos++] = 59; ';'
+        this._chunk[pos++] = 59; // ;
         pos = numToDigits(Math.round(g / 255 * 100), this._chunk, pos);
-        this._chunk[pos++] = 59; ';'
+        this._chunk[pos++] = 59; // ;
         pos = numToDigits(Math.round(b / 255 * 100), this._chunk, pos);
-        this._chunk[pos++] = 10; '\n'
+        this._chunk[pos++] = 10; // \n
         cb(this._chunk.subarray(0, pos));
         pos = 0;
       }
@@ -927,18 +927,18 @@ export class SixelImage {
       const colors = bandColors[i];
       const colorsArray = Array.from(colors).filter(el => !!rgbColors.get(el)[3]);
       for (let j = 0; j < colorsArray.length; ++j) {
-        this._chunk[pos++] = 35; '#'
+        this._chunk[pos++] = 35; // #
         pos = numToDigits(positionInPalette.get(colorsArray[j]), this._chunk, pos);
         pos = this._bands[i].colorToSixelRow(colorsArray[j], this._chunk, pos);
         if (j < colorsArray.length - 1) {
-          this._chunk[pos++] = 36; '$'
+          this._chunk[pos++] = 36; // $
           cb(this._chunk.subarray(0, pos));
           pos = 0;
         }
       }
       if (i < this._bands.length - 1) {
-        this._chunk[pos++] = 45; '-'
-        this._chunk[pos++] = 10; '\n'
+        this._chunk[pos++] = 45; // -
+        this._chunk[pos++] = 10; // \n
         cb(this._chunk.subarray(0, pos));
         pos = 0;
       }
