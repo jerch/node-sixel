@@ -1,6 +1,6 @@
 {
   "name": "sixel",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Sixel image format for node and browser.",
   "main": "./lib/index.js",
   "scripts": {
@@ -16,6 +16,10 @@
     "image",
     "terminal"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jerch/node-sixel.git"
+  },
   "author": "Joerg Breitbart <j.breitbart@netzkolchose.de>",
   "license": "MIT",
   "dependencies": {
