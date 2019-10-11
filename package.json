@@ -1,6 +1,6 @@
 {
   "name": "sixel",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Sixel image format for node and browser.",
   "main": "./lib/index.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "chai": "^4.2.0",
     "http-server": "^0.11.1",
     "mocha": "^5.2.0",
+    "node-ansiparser": "^2.2.0",
     "open": "^6.4.0",
     "rgbquant": "^1.1.2",
     "ts-loader": "^5.3.3",

@@ -334,6 +334,7 @@ class SixelBand {
     const end = this.width * 6;
     let lastCode = -1;
     let accu = 1;
+    // FIXME: avoid running beyond data.length (may happen if a single band is shorter than image width)
     for (let cursor = 0; cursor < end; cursor += 6) {
       let code = 0;
       for (let p = 0; p < 6; ++p) {
