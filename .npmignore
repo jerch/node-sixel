@@ -1,3 +1,7 @@
 testfiles
 dist
 *.png
+node_example*
+index.html
+sixel_textcursor.sh
+webpack.config.js
