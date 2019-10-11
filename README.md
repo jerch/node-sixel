@@ -74,15 +74,10 @@ Furthermore the library exposes two convenient functions to convert native RGBA 
 Install the library with `npm install sixel`.
 
 ### Demos and examples
-See the example files for decoding/encoding in nodejs. Note that the examples are not contained in the npm package,
-clone the repo and run `npm install` if you want to see them in action.
+See the example files for decoding/encoding in nodejs. Note that the examples and the browser demo are not part
+of the npm package, clone the repo and run `npm install` if you want to see them in action.
 
-Decoding can also be tested in the browser:
-```
-npm install
-npm start
-```
-and open `localhost:8080`.
+Decoding can also be tested in the browser with `npm start` under `localhost:8080`.
 
 ### Status
 Currently alpha, tests are yet to come.
