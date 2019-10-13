@@ -137,14 +137,14 @@ function hlsToRgb(h: number, l: number, s: number): RGBA8888 {
   }
 
   return (BIG_ENDIAN)
-    ? Math.round(r * 255) << 24 | Math.round(g * 255) << 16 | Math.round(b * 255) << 8 | 0xFF   // RGBA32
-    : 0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255);  // ABGR32
+    ? (Math.round(r * 255) << 24 | Math.round(g * 255) << 16 | Math.round(b * 255) << 8 | 0xFF) >>> 0   // RGBA32
+    : (0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255)) >>> 0;  // ABGR32
 }
 
 function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
   return (BIG_ENDIAN)
-    ? Math.round(r / 100 * 255) << 24 | Math.round(g / 100 * 255) << 16 | Math.round(b / 100 * 255) << 8 | 0xFF   // RGBA32
-    : 0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255);  // ABGR32
+    ? (Math.round(r / 100 * 255) << 24 | Math.round(g / 100 * 255) << 16 | Math.round(b / 100 * 255) << 8 | 0xFF) >>> 0   // RGBA32
+    : (0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255)) >>> 0;  // ABGR32
 }
 
 function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
@@ -186,6 +186,13 @@ class SixelBand {
   public data: Uint32Array;
   constructor(length: number = 4) {
     this.data = new Uint32Array(length * 6);
+  }
+
+  /**
+   * Get current memory usage of the band.
+   */
+  public get memUsage(): number {
+    return this.data.length * 4;
   }
 
   /**
@@ -464,7 +471,7 @@ const SIXEL_TABLE = (() => {
   // default transition for all states
   for (state in states) {
     // Note: ignore never changes state
-    table.addMany(r(0x00, 0x80), state, SixelAction.IGNORE, state);
+    table.addMany(r(0x00, 0x100), state, SixelAction.IGNORE, state);
   }
   // DATA state
   table.addMany(r(63, 127), SixelState.DATA, SixelAction.DRAW, SixelState.DATA);
@@ -649,6 +656,16 @@ export class SixelImage {
   }
 
   /**
+   * Get current memory usage of the image data in bytes.
+   * Can be used to restrict image handling if memory is limited.
+   * Note: This only accounts the image pixel data storage, the real value
+   * will be slightly higher due to some JS object overhead.
+   */
+  public get memUsage(): number {
+    return this._bands.reduce((accu, cur) => accu + cur.memUsage, 0);
+  }
+
+  /**
    * Write SIXEL string data to the image.
    */
   public writeString(data: string, start: number = 0, end: number = data.length): void {
@@ -671,8 +688,8 @@ export class SixelImage {
     let params = this._params;
 
     for (let i = start; i < end; ++i) {
-      const code = data[i];
-      const transition = SIXEL_TABLE.table[currentState << 8 | (code < 0x7F ? code : 0xFF)];
+      const code = data[i] & 0xFF;
+      const transition = SIXEL_TABLE.table[currentState << 8 | (code < 0x7F ? code : 0xFF)] | 0;
       switch (transition >> 4) {
         case SixelAction.DRAW:
           dataStart = (~dataStart) ? dataStart : i;
@@ -736,11 +753,19 @@ export class SixelImage {
           if (currentState === SixelState.COLOR) {
             if (params.length >= 5) {
               if (params[1] === 1) {
-                // HLS color
-                this._colors[params[0]] = color = normalizeHLS(params[2], params[3], params[4]);
+                // HLS color, angle as mod 260, LS in % clamped to 100
+                this._colors[params[0]] = color = normalizeHLS(
+                  params[2] % 360,
+                  Math.min(params[3], 100),
+                  Math.min(params[4], 100)
+                );
               } else if (params[1] === 2) {
-                // RGB color
-                this._colors[params[0]] = color = normalizeRGB(params[2], params[3], params[4]);
+                // RGB color in %, clamped to 100
+                this._colors[params[0]] = color = normalizeRGB(
+                  Math.min(params[2], 100),
+                  Math.min(params[3], 100),
+                  Math.min(params[4], 100)
+                );
               }
             } else if (params.length === 1) {
               color = this._colors[params[0]] || this._colors[0];
@@ -854,6 +879,11 @@ export class SixelImage {
    * @param cb  callback to process a single SIXEL chunk (borrowed)
    */
   public toSixelBytes(cb: (chunk: Uint8Array) => void): void {
+    // exit early if we have no image data
+    if (!this.width || !this.height) {
+      return;
+    }
+
     // prepare chunk buffer
     if (!this._chunk || this._chunk.length < this.width + 100) {
       this._chunk = new Uint8Array(this.width + 100);

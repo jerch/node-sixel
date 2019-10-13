@@ -26,6 +26,10 @@ The library provides a class `SixelImage` with the following properties:
     Number respresenting the background fill color. A value of 0 will leave background pixels untouched.
     The number depends on endianess of the architecture, create it with `toRGBA8888(r, g, b, a)`.
 
+- `memoryUsage: number`  
+    Get current memory usage of the image data in bytes. Can be used to restrict image handling if memory is limited.  
+    Note: This only accounts the image pixel data storage, the real value will be slightly higher due to some JS object overhead.
+
 - `write(data: UintTypedArray, start: number = 0, end: number = data.length): void`  
     Decodes SIXEL bytes and updates the image data. This is done as a stream,
     therefore it is possible to grab partly transmitted images (see "Simulate slow chunks" in browser example).
