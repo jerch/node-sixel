@@ -97,6 +97,39 @@ of the npm package, clone the repo and run `npm install` if you want to see them
 
 Decoding can also be tested in the browser after `npm start` under `localhost:8080`.
 
+Encoding can be tested with `img2sixel.js` as small cmdline tool, e.g.
+```
+$> node img2sixel.js -p16 http://leeoniya.github.io/RgbQuant.js/demo/img/bluff.jpg
+```
+
+## Benchmarks
+Performance is measured for typical actions based on 9-bit palette image:
+![test image](palette.png "test image")
+
+The test image repeats the palette image 8 times to form a 640x480 image with 512 colors. The unusual (and not spec conform) high number of colors was choosen to explicit test for this as an upper bound.
+
+Results:
+```
+   Context "lib/index.benchmark.js"
+      Context "SixelImage"
+         Case "fromImageData - unsafe palette" : 10 runs - average runtime: 26.11 ms
+         Case "fromImageData - safe palette" : 10 runs - average runtime: 8.34 ms
+         Case "toImageData - with fillColor" : 10 runs - average runtime: 2.93 ms
+         Case "toImageData - without fillColor" : 10 runs - average runtime: 1.93 ms
+         Case "writeString" : 10 runs - average runtime: 38.42 ms
+         Case "write" : 10 runs - average runtime: 34.57 ms
+         Case "toSixelString" : 10 runs - average runtime: 36.10 ms
+         Case "toSixelBytes" : 10 runs - average runtime: 29.63 ms
+```
+
+Note the high values for:
+- "fromImageData - unsafe palette"  
+  Caused by the additional needed ED calculation and color palette replacement. Prolly can be made faster.
+- "write"  
+  The decode parser is not yet further optimized.
+- "toSixelBytes"  
+  Has already seen some optimizations (down from ~150ms to ~30ms), not sure if that can be made much faster.
+
 ### Status
 Currently alpha, tests are yet to come.
 

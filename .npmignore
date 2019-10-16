@@ -5,3 +5,12 @@ node_example*
 index.html
 sixel_textcursor.sh
 webpack.config.js
+coverage
+.nyc_output
+.nycrc
+benchmark
+lib/*.benchmark.*
+lib/*.test.*
+src/*.benchmark.*
+src/*.test.*
+img2sixel.js

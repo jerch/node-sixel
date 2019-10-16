@@ -57,6 +57,7 @@ function nearestColorIdx(color: RGBA8888, palette: RGBColor[]): number {
     const dg = g - palette[i][1];
     const db = b - palette[i][2];
     const d = dr * dr + dg * dg + db * db;
+    if (!d) return i;
     if (d < min) {
       min = d;
       idx = i;
@@ -183,16 +184,26 @@ function numToDigits(n: number, target: Uint8Array, pos: number): number {
 class SixelBand {
   private _cursor = 0;
   public width = 0;
-  public data: Uint32Array;
+  public data: Uint16Array;
+  public palette: Set<RGBA8888> = new Set<RGBA8888>();
+  public posInPal: Map<RGBA8888, number> = new Map<RGBA8888, number>();
+  private _currentPalIdx: number;
+  private _currentColor: RGBA8888;
   constructor(length: number = 4) {
-    this.data = new Uint32Array(length * 6);
+    this.data = new Uint16Array(length * 6);
+    // every band has one slot for transparent (background)
+    this.palette.add(0);
+    this.posInPal.set(0, 0);
+    this._currentPalIdx = 0;
+    this._currentColor = 0;
   }
 
   /**
    * Get current memory usage of the band.
    */
   public get memUsage(): number {
-    return this.data.length * 4;
+    // FIXME: calc palette and stuff
+    return this.data.length * 2;
   }
 
   /**
@@ -203,15 +214,26 @@ class SixelBand {
     const pos = this._cursor * 6;
     // resize by power of 2 if needed
     if (pos >= this.data.length) {
-      const data = new Uint32Array(this.data.length * 2);
-      data.set(this.data);
-      this.data = data;
+      const newData = new Uint16Array(this.data.length * 2);
+      newData.set(this.data);
+      this.data = newData;
+    }
+    // check for palette entry, add if needed
+    if (color !== this._currentColor) {
+      if (!this.palette.has(color)) {
+        this.palette.add(color);
+        this.posInPal.set(color, this.palette.size - 1);
+        this._currentPalIdx = this.palette.size - 1;
+      } else {
+        this._currentPalIdx = this.posInPal.get(color);
+      }
+      this._currentColor = color;
     }
     // update data
     code -= 63;
     for (let p = 0; p < 6; ++p) {
       if (code & (1 << p)) {
-        this.data[pos + p] = color;
+        this.data[pos + p] = this._currentPalIdx;
       }
     }
     // update cursor pos and length
@@ -237,128 +259,114 @@ class SixelBand {
    * Low level method to access the band's image data.
    * Not for direct usage (no bound checks), use `SixelImage.toImageData` instead.
    */
-  public copyPixelRow(target: Uint32Array, offset: number, row: number, start: number, length: number): void {
+  public copyPixelRow(target: Uint32Array, offset: number, row: number, start: number, length: number, pal: RGBA8888[]): void {
     const end = Math.min(this.width, start + length);
     let pixel = 0;
     for (let i = start; i < end; ++i) {
-      if (pixel = this.data[i * 6 + row]) {
+      if (pixel = pal[this.data[i * 6 + row]]) {
         target[offset + i] = pixel;
       }
     }
   }
 
-  public insertPixelRow(source: Uint32Array, yStart: number, length: number, colorMap: Map<RGBA8888, number>): void {
-    const start = yStart * length;
-    let c = 0;
-    for (let i = 0; i < length; ++i) {
-      const pos = start + i;
-      this.data[c++] = colorMap.get(source[pos]);
-      this.data[c++] = colorMap.get(source[pos + length * 1]);
-      this.data[c++] = colorMap.get(source[pos + length * 2]);
-      this.data[c++] = colorMap.get(source[pos + length * 3]);
-      this.data[c++] = colorMap.get(source[pos + length * 4]);
-      this.data[c++] = colorMap.get(source[pos + length * 5]);
-    }
-  }
-
-  public insertPixelRowLast(
+  public insertPixelRow(
     source: Uint32Array, yStart: number, length: number,
-    colorMap: Map<RGBA8888, number>,
+    colorMap: Map<RGBA8888, RGBA8888> | null,
     bandHeight: number): void
   {
     const start = yStart * length;
     let c = 0;
-    switch (bandHeight) {
-      case 5:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          this.data[c++] = colorMap.get(source[pos + length * 2]);
-          this.data[c++] = colorMap.get(source[pos + length * 3]);
-          this.data[c++] = colorMap.get(source[pos + length * 4]);
-          c++;
+    let oldColor = 0;
+    let oldIdx = 0;
+    for (let i = 0; i < length; ++i) {
+      const pos = start + i;
+      let rowOffset = 0;
+      for (let row = 0; row < bandHeight; ++row) {
+        let color = source[pos + rowOffset];
+        if (colorMap) color = colorMap.get(color);
+        if (color !== oldColor) {
+          if (this.palette.has(color)) {
+            oldIdx = this.posInPal.get(color);
+          } else {
+            this.palette.add(color);
+            this.posInPal.set(color, this.palette.size - 1);
+            oldIdx = this.palette.size - 1;
+          }
+          oldColor = color;
         }
-        break;
-      case 4:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          this.data[c++] = colorMap.get(source[pos + length * 2]);
-          this.data[c++] = colorMap.get(source[pos + length * 3]);
-          c += 2;
-        }
-        break;
-      case 3:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          this.data[c++] = colorMap.get(source[pos + length * 2]);
-          c += 3;
-        }
-        break;
-      case 2:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          c += 4;
-        }
-        break;
-      case 1:
-        for (let i = 0; i < length; ++i) {
-          this.data[c++] = colorMap.get(source[start + i]);
-          c += 5;
-        }
-        break;
+        this.data[c++] = oldIdx;
+        rowOffset += length;
+      }
+      c += 6 - bandHeight;
     }
   }
 
-  public get colors(): Set<number> {
-    // read only up to with * 6 (data.length might be longer due to 2^x growing)
-    const end = this.width * 6;
-    const result = new Set<number>();
-    for (let pixel = 0; pixel < end; ++pixel) {
-      result.add(this.data[pixel]);
-    }
-    return result;
-  }
+  public toSixelRow(target: Uint8Array, posInPal: Map<RGBA8888, number>, cb: Function, width: number, buffer: ArrayBuffer): void {
+    const end = Math.min(this.width, width) * 6;
+    const colors = [...this.palette];
+    const length = colors.length;
 
-  public get histogram(): HistogramType {
-    // read only up to with * 6 (data.length might be longer due to 2^x growing)
-    const end = this.width * 6;
-    const result = new Map<RGBA8888, number>();
-    for (let pixel = 0; pixel < end; ++pixel) {
-      const color = this.data[pixel];
-      result.set(color, (result.get(color) || 0) + 1);
-    }
-    return result;
-  }
+    // create temp buffers to hold color data
+    let offset = 0;
+    const last = new Int8Array(buffer, offset, length);
+    offset += (length + 3) & ~3;
+    const code = new Uint8Array(buffer, offset, length);
+    offset += (length + 3) & ~3;
+    const accu = new Uint16Array(buffer, offset, length * 2);
+    offset += (length * 2 + 3) & ~3;
+    const pos = new Uint16Array(buffer, offset, length * 2);
+    offset += (length * 2 + 3) & ~3;
 
-  public colorToSixelRow(color: RGBA8888, target: Uint8Array, pos: number): number {
-    const end = this.width * 6;
-    let lastCode = -1;
-    let accu = 1;
-    // FIXME: avoid running beyond data.length (may happen if a single band is shorter than image width)
-    for (let cursor = 0; cursor < end; cursor += 6) {
-      let code = 0;
-      for (let p = 0; p < 6; ++p) {
-        if (this.data[cursor + p] === color) {
-          code |= 1 << p;
+    // holds temp all data for a single color
+    const targets: Uint8Array[] = [];
+    for (let i = 0; i < length; ++i) {
+      targets[i] = new Uint8Array(buffer, offset, width);
+      offset += (width + 3) & ~3;
+    }
+    last.fill(-1);
+    accu.fill(1);
+    pos.fill(0);
+
+    for (let cursor = 0; cursor < end;) {
+      code.fill(0);
+      code[this.data[cursor++]] |= 1;
+      code[this.data[cursor++]] |= 2;
+      code[this.data[cursor++]] |= 4;
+      code[this.data[cursor++]] |= 8;
+      code[this.data[cursor++]] |= 16;
+      code[this.data[cursor++]] |= 32;
+      for (let i = 0; i < length; ++i) {
+        if (code[i] === last[i]) {
+          accu[i]++;
+        } else {
+          if (~last[i]) {
+            pos[i] = this._codeToSixel(last[i], accu[i], targets[i], pos[i]);
+          }
+          last[i] = code[i];
+          accu[i] = 1;
         }
       }
-      if (code === lastCode) {
-        accu++;
-      } else {
-        pos = this._codeToSixel(lastCode, accu, target, pos);
-        lastCode = code;
-        accu = 1;
+    }
+
+    for (let i = 0; i < length; ++i) {
+      if (last[i]) {
+        pos[i] = this._codeToSixel(last[i], accu[i], targets[i], pos[i]);
       }
     }
-    pos = this._codeToSixel(lastCode, accu, target, pos);
-    return pos;
+    
+    // write sixel chunk for every color in band
+    let targetPos = 0;
+    for (let i = 0; i < length; ++i) {
+      const color = colors[i];
+      if (!alpha(color)) continue;  // skip "holey" pixels
+      target[targetPos++] = 35; // #
+      targetPos = numToDigits(posInPal.get(color), target, targetPos);
+      target.set(targets[i].subarray(0, pos[i]), targetPos);
+      targetPos += pos[i];
+      target[targetPos++] = 36; // $
+      cb(target.subarray(0, targetPos));
+      targetPos = 0;
+    }
   }
 
   private _codeToSixel(code: number, repeat: number, target: Uint8Array, pos: number): number {
@@ -599,16 +607,14 @@ export class SixelImage {
    */
   public static fromImageData(
     data: Uint8ClampedArray | Uint8Array, width: number, height: number,
-    palette: RGBA8888[] | RGBColor[] = DEFAULT_COLORS): SixelImage
+    palette: RGBA8888[] | RGBColor[] = DEFAULT_COLORS, safePalette: boolean = false): SixelImage
   {
-
-    // TODO: perf opt - allow skipping palette recoloring for safe inputs (directly from quantizer)
-
     if (width * height * 4 !== data.length) {
       throw new Error('wrong geometry of data');
     }
     const data32 = new Uint32Array(data.buffer);
-    const colorMap = this._genColorMap(data32, palette);
+    // skip color -> palette map creation if we have a safe palette
+    const colorMap = safePalette ? null : this._genColorMap(data32, palette);
     const img = new SixelImage();
     img._width = width;
     img._height = height;
@@ -619,7 +625,7 @@ export class SixelImage {
       const band = new SixelBand(width);
       band.width = width;
       img._bands.push(band);
-      band.insertPixelRow(data32, b * 6, width, colorMap);
+      band.insertPixelRow(data32, b * 6, width, colorMap, 6);
     }
 
     // underfull last band
@@ -628,7 +634,7 @@ export class SixelImage {
       const band = new SixelBand(width);
       band.width = width;
       img._bands.push(band);
-      band.insertPixelRowLast(data32, fullHeight, width, colorMap, height - fullHeight);
+      band.insertPixelRow(data32, fullHeight, width, colorMap, height - fullHeight);
     }
 
     return img; 
@@ -839,29 +845,27 @@ export class SixelImage {
     let p = sy % 6;
     let bandIdx = (sy / 6) | 0;
     let i = 0;
+    let pal = [...this._bands[bandIdx].palette];
     while (bandIdx < this._bands.length && i < sheight) {
       const offset = (dy + i) * width + dx;
       if (fillColor) {
-        const end = offset + swidth;
-        for (let k = offset; k < end; ++k) {
-          target32[k] = fillColor;
-        }
+        target32.fill(fillColor, offset, offset + swidth);
       }
-      this._bands[bandIdx].copyPixelRow(target32, offset - sx, p, sx, swidth);
+      this._bands[bandIdx].copyPixelRow(target32, offset - sx, p, sx, swidth, pal);
       p++;
       i++;
       if (p === 6) {
         bandIdx++;
+        if (bandIdx < this._bands.length) {
+          pal = [...this._bands[bandIdx].palette];
+        }
         p = 0;
       }
     }
     if (fillColor) {
       while (i < sheight) {
         const offset = (dy + i) * width + dx;
-        const end = offset + swidth;
-        for (let k = offset; k < end; ++k) {
-          target32[k] = fillColor;
-        }
+        target32.fill(fillColor, offset, offset + swidth);
         i++;
       }
     }
@@ -890,13 +894,9 @@ export class SixelImage {
     }
 
     // get colors of image
-    // Note: we cannot simply rely on `_colors` here since entries
-    // might have changed during writing.
     const imageColors = new Set<RGBA8888>();
-    const bandColors: Set<RGBA8888>[] = [];
     for (let i = 0; i < this._bands.length; ++i) {
-      const colors = this._bands[i].colors;
-      bandColors.push(colors);
+      const colors = this._bands[i].palette;
       for (let color of colors) {
         imageColors.add(color);
       }
@@ -952,21 +952,21 @@ export class SixelImage {
       }
     }
 
+    // create arraybuffer to hold temp band data
+    const longestPal = (Math.max(...this._bands.map(band => band.palette.size)) + 3) & ~3;
+    const alignedWidth = (this.width + 3) & ~3;
+    const buffer = new ArrayBuffer(
+        longestPal                // const last = new Int8Array(colors.length);
+      + longestPal                // const code = new Uint8Array(colors.length);
+      + longestPal * 2            // const accu = new Uint16Array(colors.length);
+      + longestPal * 2            // const pos = new Uint16Array(colors.length);
+      + longestPal * alignedWidth // color targets
+    );
+
     // write data for each color of all bands
     // skips color entries with alpha 0 ("holey pixels" - to be colored by `backgroundSelect`)
     for (let i = 0; i < this._bands.length; ++i) {
-      const colors = bandColors[i];
-      const colorsArray = Array.from(colors).filter(el => !!rgbColors.get(el)[3]);
-      for (let j = 0; j < colorsArray.length; ++j) {
-        this._chunk[pos++] = 35; // #
-        pos = numToDigits(positionInPalette.get(colorsArray[j]), this._chunk, pos);
-        pos = this._bands[i].colorToSixelRow(colorsArray[j], this._chunk, pos);
-        if (j < colorsArray.length - 1) {
-          this._chunk[pos++] = 36; // $
-          cb(this._chunk.subarray(0, pos));
-          pos = 0;
-        }
-      }
+      this._bands[i].toSixelRow(this._chunk, positionInPalette, cb, this.width, buffer);
       if (i < this._bands.length - 1) {
         this._chunk[pos++] = 45; // -
         this._chunk[pos++] = 10; // \n
