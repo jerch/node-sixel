@@ -106,7 +106,7 @@ $> node img2sixel.js -p16 http://leeoniya.github.io/RgbQuant.js/demo/img/bluff.j
 Performance is measured for typical actions based on 9-bit palette image:
 ![test image](palette.png "test image")
 
-The test image repeats the palette image 8 times to form a 640x480 image with 512 colors. The unusual (and not spec conform) high number of colors was choosen to explicit test for this as an upper bound.
+The test image repeats the palette image 6 times to form a 640x480 image with 512 colors. The unusual (and not spec conform) high number of colors was choosen to explicit test for this as an upper bound.
 
 Results:
 ```
@@ -140,4 +140,4 @@ Currently alpha, tests are yet to come.
 
 ### References
 
-While being quite common in the DEC ecosystem in the 80s (even used for printer protocols), SIXEL references are very limited these days. The closest to a specification we have can be found in the Video Systems Reference Manual ([DEC STD 070](http://www.bitsavers.org/pdf/dec/standards/EL-SM070-00_DEC_STD_070_Video_Systems_Reference_Manual_Dec91.pdf#page=908), p. 908-933). Also see [Sixel Graphics](https://www.vt100.net/docs/vt3xx-gp/chapter14.html) on vt100.net, which gives a quick overview. For implementation this old usenet article "[All About SIXELs](https://www.digiater.nl/openvms/decus/vax90b1/krypton-nasa/all-about-sixels.text)" was very helpful.
+While being quite common in the DEC ecosystem in the 80s (even used for printer protocols), SIXEL references are very limited these days. The closest to a specification we have can be found in the Video Systems Reference Manual ([DEC STD 070](http://www.bitsavers.org/pdf/dec/standards/EL-SM070-00_DEC_STD_070_Video_Systems_Reference_Manual_Dec91.pdf#page=908), p. 908-933). Also see [Sixel Graphics](https://www.vt100.net/docs/vt3xx-gp/chapter14.html) on vt100.net, which gives a quick overview. For implementation the old usenet article "[All About SIXELs](https://www.digiater.nl/openvms/decus/vax90b1/krypton-nasa/all-about-sixels.text)" was very helpful.
