@@ -112,14 +112,14 @@ Results:
 ```
    Context "lib/index.benchmark.js"
       Context "SixelImage"
-         Case "fromImageData - unsafe palette" : 10 runs - average runtime: 21.61 ms
-         Case "fromImageData - safe palette" : 10 runs - average runtime: 2.15 ms
-         Case "toImageData - with fillColor" : 10 runs - average runtime: 2.97 ms
-         Case "toImageData - without fillColor" : 10 runs - average runtime: 1.34 ms
-         Case "writeString" : 10 runs - average runtime: 39.39 ms
-         Case "write" : 10 runs - average runtime: 34.61 ms
-         Case "toSixelString" : 10 runs - average runtime: 77.32 ms
-         Case "toSixelBytes" : 10 runs - average runtime: 68.91 ms
+         Case "fromImageData - unsafe palette" : 10 runs - average runtime: 26.11 ms
+         Case "fromImageData - safe palette" : 10 runs - average runtime: 8.34 ms
+         Case "toImageData - with fillColor" : 10 runs - average runtime: 2.93 ms
+         Case "toImageData - without fillColor" : 10 runs - average runtime: 1.93 ms
+         Case "writeString" : 10 runs - average runtime: 38.42 ms
+         Case "write" : 10 runs - average runtime: 34.57 ms
+         Case "toSixelString" : 10 runs - average runtime: 36.10 ms
+         Case "toSixelBytes" : 10 runs - average runtime: 29.63 ms
 ```
 
 Note the high values for:
@@ -128,7 +128,7 @@ Note the high values for:
 - "write"  
   The decode parser is not yet further optimized.
 - "toSixelBytes"  
-  Encoding shows a really bad growing behavior for dimension and colors and needs a major refactoring.
+  Has already seen some optimizations (down from ~150ms to ~30ms), not sure if that can be made much faster.
 
 ### Status
 Currently alpha, tests are yet to come.
