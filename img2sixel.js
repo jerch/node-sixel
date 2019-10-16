@@ -17,6 +17,8 @@ const { loadImage, createCanvas } = require('canvas');
 const RgbQuant = require('rgbquant');
 const { SixelImage } = require('./lib/index');
 
+let quantization = 0;
+let sixelConversion = 0;
 
 async function processImage(filename) {
   // load image
@@ -32,12 +34,15 @@ async function processImage(filename) {
   ctx.drawImage(img, 0, 0);
 
   // quantize and dither
+  const s1 = Date.now();
   const q = new RgbQuant({colors: MAX_PALETTE, dithKern: 'FloydSteinberg', dithSerp: true});
   q.sample(canvas);
   const palette = q.palette(true);
   const quantizedData = q.reduce(canvas);
+  quantization += Date.now() - s1;
   
   // output to terminal
+  const s2 = Date.now();
   const sixelImage = SixelImage.fromImageData(quantizedData, img.width, img.height, palette);
   console.log(`${filename}:`);
   console.log(SixelImage.introducer(BACKGROUND_SELECT));
@@ -46,8 +51,14 @@ async function processImage(filename) {
   } finally {
     console.log(SixelImage.finalizer());
   }
+  sixelConversion += Date.now() - s2;
 }
 
-for (const filename of process.argv.slice(2)) {
-  processImage(filename);
+async function main() {
+  for (const filename of process.argv.slice(2)) {
+    await processImage(filename);
+  }
+  console.log('runtime:', {quantization, sixelConversion});
 }
+
+main();
