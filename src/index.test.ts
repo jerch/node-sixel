@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { SixelImage, fromRGBA8888, toRGBA8888 } from './index';
+import { SixelImage, fromRGBA8888, toRGBA8888, RGBA8888 } from './index';
 
 const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
 
@@ -56,6 +56,16 @@ describe('RGBA8888 native colors', () => {
     });
   });
 })
+
+class ChunkWriter {
+  public pos = 0;
+  constructor(public target: Uint8Array) {}
+  public write(chunk: Uint8Array): number {
+    this.target.set(chunk, this.pos);
+    this.pos += chunk.length;
+    return this.pos;
+  }
+}
 
 describe('SixelImage', () => {
   let img: SixelImage;
@@ -221,6 +231,107 @@ describe('SixelImage', () => {
         img.write(input, 0, 1);
         assert.equal((img as any)._currentState, 2);    // 2 == ATTR
       });
+    });
+  });
+  describe('encode - decode', () => {
+    let source32: Uint32Array;
+    let source8: Uint8ClampedArray;
+    let target32: Uint32Array;
+    let target8: Uint8ClampedArray;
+    let sixels: Uint8Array;
+    let writer: ChunkWriter;
+    beforeEach(() => {
+      // test with max 100x100 pixel data
+      source32 = new Uint32Array(100 * 100);
+      source8 = new Uint8ClampedArray(source32.buffer);
+      target32 = new Uint32Array(100 * 100);
+      target8 = new Uint8ClampedArray(target32.buffer);
+      sixels = new Uint8Array(1000000); // hard to precalc
+      writer = new ChunkWriter(sixels);
+    });
+    it('10x1 black', () => {
+      // prepare data
+      for (let i = 0; i < 10; ++i) source32[i] = toRGBA8888(0, 0, 0);
+      // encode
+      const imgEnc = SixelImage.fromImageData(source8.subarray(0, 10 * 4), 10, 1, [toRGBA8888(0, 0, 0)]);
+      imgEnc.toSixelBytes(chunk => writer.write(chunk));
+      // decode
+      const imgDec = new SixelImage(0);
+      imgDec.write(sixels, 0, writer.pos);
+      imgDec.toImageData(target8.subarray(0, 10 * 4), 10, 1);
+      // compare
+      assert.equal(imgEnc.toSixelString(), imgDec.toSixelString());
+      assert.deepEqual(target8, source8);
+      assert.equal(imgEnc.width, 10);
+      assert.equal(imgEnc.height, 1);
+      assert.equal(imgDec.width, 10);
+      assert.equal(imgDec.height, 1);
+    });
+    it('10x1 with 8 colors', () => {
+      // prepare data
+      const palette: RGBA8888[] = [
+        toRGBA8888(0, 0, 0),
+        toRGBA8888(255, 0, 0),
+        toRGBA8888(0, 255, 0),
+        toRGBA8888(0, 0, 255),
+        toRGBA8888(255, 255, 0),
+        toRGBA8888(255, 0, 255),
+        toRGBA8888(0, 255, 255),
+        toRGBA8888(255, 255, 255)
+      ];
+      for (let i = 0; i < 8; ++i) source32[i] = palette[i];
+      // encode
+      const imgEnc = SixelImage.fromImageData(source8.subarray(0, 8 * 4), 8, 1, palette);
+      imgEnc.toSixelBytes(chunk => writer.write(chunk));
+      // decode
+      const imgDec = new SixelImage(0);
+      imgDec.write(sixels, 0, writer.pos);
+      imgDec.toImageData(target8.subarray(0, 8 * 4), 8, 1);
+      // compare
+      assert.equal(imgEnc.toSixelString(), imgDec.toSixelString());
+      assert.deepEqual(target8, source8);
+      assert.equal(imgEnc.width, 8);
+      assert.equal(imgEnc.height, 1);
+      assert.equal(imgDec.width, 8);
+      assert.equal(imgDec.height, 1);
+    });
+    it('100x100 with 256 random colors (noise)', () => {
+      // prepare data
+      // generate 256 random colors
+      const strippedPal: number[] = [];
+      while (strippedPal.length < 256) {
+        const v = Math.floor(Math.random() * (255 << 16 | 255 << 8 | 255));
+        if (!~strippedPal.indexOf(v)) strippedPal.push(v);
+      }
+      // convert to sixel palette
+      const palette: RGBA8888[] = [];
+      for (let i = 0; i < 256; ++i) {
+        const v = strippedPal[i];
+        // we have to do a normalization to 100 steps in between
+        // channels values between cannot be expressed in SIXEL (lower color resolution)
+        const r = Math.round(Math.round((v >> 16) / 255 * 100) / 100 * 255);
+        const g = Math.round(Math.round(((v >> 8) & 0xFF) / 255 * 100) / 100 * 255);
+        const b = Math.round(Math.round((v & 0xFF) / 255 * 100) / 100 * 255);
+        palette.push(toRGBA8888(r, g, b));
+      }
+      // apply to input data
+      for (let i = 0; i < 100 * 100; ++i) {
+        source32[i] = palette[Math.floor(Math.random() * 256)];
+      }
+      // encode
+      const imgEnc = SixelImage.fromImageData(source8, 100, 100, palette);
+      imgEnc.toSixelBytes(chunk => writer.write(chunk));
+      // decode
+      const imgDec = new SixelImage(0);
+      imgDec.write(sixels, 0, writer.pos);
+      imgDec.toImageData(target8, 100, 100);
+      // compare
+      assert.equal(imgEnc.toSixelString(), imgDec.toSixelString());
+      assert.deepEqual(target8, source8);
+      assert.equal(imgEnc.width, 100);
+      assert.equal(imgEnc.height, 100);
+      assert.equal(imgDec.width, 100);
+      assert.equal(imgDec.height, 100);
     });
   });
 });

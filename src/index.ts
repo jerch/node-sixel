@@ -57,6 +57,7 @@ function nearestColorIdx(color: RGBA8888, palette: RGBColor[]): number {
     const dg = g - palette[i][1];
     const db = b - palette[i][2];
     const d = dr * dr + dg * dg + db * db;
+    if (!d) return i;
     if (d < min) {
       min = d;
       idx = i;
@@ -247,72 +248,56 @@ class SixelBand {
     }
   }
 
-  public insertPixelRow(source: Uint32Array, yStart: number, length: number, colorMap: Map<RGBA8888, number>): void {
+  public insertPixelRow(source: Uint32Array, yStart: number, length: number, colorMap: Map<RGBA8888, number> | null): void {
     const start = yStart * length;
     let c = 0;
-    for (let i = 0; i < length; ++i) {
-      const pos = start + i;
-      this.data[c++] = colorMap.get(source[pos]);
-      this.data[c++] = colorMap.get(source[pos + length * 1]);
-      this.data[c++] = colorMap.get(source[pos + length * 2]);
-      this.data[c++] = colorMap.get(source[pos + length * 3]);
-      this.data[c++] = colorMap.get(source[pos + length * 4]);
-      this.data[c++] = colorMap.get(source[pos + length * 5]);
+    if (colorMap) {
+      for (let i = 0; i < length; ++i) {
+        const pos = start + i;
+        this.data[c++] = colorMap.get(source[pos]);
+        this.data[c++] = colorMap.get(source[pos + length * 1]);
+        this.data[c++] = colorMap.get(source[pos + length * 2]);
+        this.data[c++] = colorMap.get(source[pos + length * 3]);
+        this.data[c++] = colorMap.get(source[pos + length * 4]);
+        this.data[c++] = colorMap.get(source[pos + length * 5]);
+      }
+    } else {
+      for (let i = 0; i < length; ++i) {
+        const pos = start + i;
+        this.data[c++] = source[pos];
+        this.data[c++] = source[pos + length * 1];
+        this.data[c++] = source[pos + length * 2];
+        this.data[c++] = source[pos + length * 3];
+        this.data[c++] = source[pos + length * 4];
+        this.data[c++] = source[pos + length * 5];
+      }
     }
   }
 
   public insertPixelRowLast(
     source: Uint32Array, yStart: number, length: number,
-    colorMap: Map<RGBA8888, number>,
+    colorMap: Map<RGBA8888, number> | null,
     bandHeight: number): void
   {
     const start = yStart * length;
     let c = 0;
-    switch (bandHeight) {
-      case 5:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          this.data[c++] = colorMap.get(source[pos + length * 2]);
-          this.data[c++] = colorMap.get(source[pos + length * 3]);
-          this.data[c++] = colorMap.get(source[pos + length * 4]);
-          c++;
+
+    if (colorMap) {
+      for (let i = 0; i < length; ++i) {
+        const pos = start + i;
+        for (let row = 0; row < bandHeight; ++row) {
+          this.data[c++] = colorMap.get(source[pos + length * row]);
         }
-        break;
-      case 4:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          this.data[c++] = colorMap.get(source[pos + length * 2]);
-          this.data[c++] = colorMap.get(source[pos + length * 3]);
-          c += 2;
+        c += 6 - bandHeight;
+      }
+    } else {
+      for (let i = 0; i < length; ++i) {
+        const pos = start + i;
+        for (let row = 0; row < bandHeight; ++row) {
+          this.data[c++] = source[pos + length * row];
         }
-        break;
-      case 3:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          this.data[c++] = colorMap.get(source[pos + length * 2]);
-          c += 3;
-        }
-        break;
-      case 2:
-        for (let i = 0; i < length; ++i) {
-          const pos = start + i;
-          this.data[c++] = colorMap.get(source[pos]);
-          this.data[c++] = colorMap.get(source[pos + length * 1]);
-          c += 4;
-        }
-        break;
-      case 1:
-        for (let i = 0; i < length; ++i) {
-          this.data[c++] = colorMap.get(source[start + i]);
-          c += 5;
-        }
-        break;
+        c += 6 - bandHeight;
+      }
     }
   }
 
@@ -337,6 +322,67 @@ class SixelBand {
     return result;
   }
 
+  public toSixelRow(target: Uint8Array, colors: RGBA8888[], posInPal: Map<RGBA8888, number>, cb: Function): void {
+    const end = this.width * 6;
+
+    const last = new Int8Array(colors.length);
+    const code = new Uint8Array(colors.length);
+    const accu = new Uint16Array(colors.length);
+    const pos = new Uint16Array(colors.length);
+    const colorMap: {[key: number]: number} = {};
+    colors.map((el, idx) => { colorMap[el] = idx; });
+
+    const buffer = new Uint8Array(target.length * colors.length);
+    const targets: Uint8Array[] = [];
+    for (let i = 0; i < colors.length; ++i) {
+      //targets[i] = new Uint8Array(target.length);
+      targets[i] = new Uint8Array(buffer.buffer, target.length * i);
+    }
+
+    last.fill(-1);
+    accu.fill(1);
+
+    for (let cursor = 0; cursor < end;) {
+      code.fill(0);
+      code[colorMap[this.data[cursor++]]] |= 1;
+      code[colorMap[this.data[cursor++]]] |= 2;
+      code[colorMap[this.data[cursor++]]] |= 4;
+      code[colorMap[this.data[cursor++]]] |= 8;
+      code[colorMap[this.data[cursor++]]] |= 16;
+      code[colorMap[this.data[cursor++]]] |= 32;
+      for (let i = 0; i < code.length; ++i) {
+        if (code[i] === last[i]) {
+          accu[i]++;
+        } else {
+          if (~last[i]) {
+            pos[i] = this._codeToSixel(last[i], accu[i], targets[i], pos[i]);
+          }
+          last[i] = code[i];
+          accu[i] = 1;
+        }
+      }
+    }
+
+    for (let i = 0; i < code.length; ++i) {
+      if (last[i]) {
+        pos[i] = this._codeToSixel(last[i], accu[i], targets[i], pos[i]);
+      }
+    }
+    
+    let targetPos = 0;
+    for (let i = 0; i < colors.length; ++i) {
+      const color = colors[i];
+      if (!alpha(color)) continue;
+      target[targetPos++] = 35; // #
+      targetPos = numToDigits(posInPal.get(color), target, targetPos);
+      target.set(targets[i].subarray(0, pos[i]), targetPos);
+      targetPos += pos[i];
+      target[targetPos++] = 36; // $
+      cb(target.subarray(0, targetPos));
+      targetPos = 0;
+    }
+  }
+
   public colorToSixelRow(color: RGBA8888, target: Uint8Array, pos: number): number {
     const end = this.width * 6;
     let lastCode = -1;
@@ -357,7 +403,10 @@ class SixelBand {
         accu = 1;
       }
     }
-    pos = this._codeToSixel(lastCode, accu, target, pos);
+    // write last entry only if not 0 - avoids encoding of empty pixels up to band end
+    if (lastCode) {
+      pos = this._codeToSixel(lastCode, accu, target, pos);
+    }
     return pos;
   }
 
@@ -599,16 +648,14 @@ export class SixelImage {
    */
   public static fromImageData(
     data: Uint8ClampedArray | Uint8Array, width: number, height: number,
-    palette: RGBA8888[] | RGBColor[] = DEFAULT_COLORS): SixelImage
+    palette: RGBA8888[] | RGBColor[] = DEFAULT_COLORS, safePalette: boolean = false): SixelImage
   {
-
-    // TODO: perf opt - allow skipping palette recoloring for safe inputs (directly from quantizer)
-
     if (width * height * 4 !== data.length) {
       throw new Error('wrong geometry of data');
     }
     const data32 = new Uint32Array(data.buffer);
-    const colorMap = this._genColorMap(data32, palette);
+    // skip color -> palette map creation if we have a safe palette
+    const colorMap = safePalette ? null : this._genColorMap(data32, palette);
     const img = new SixelImage();
     img._width = width;
     img._height = height;
@@ -835,6 +882,7 @@ export class SixelImage {
       return target;
     }
     // copy data on 32 bit values
+    // TODO: optimize fillColor handling
     const target32 = new Uint32Array(target.buffer);
     let p = sy % 6;
     let bandIdx = (sy / 6) | 0;
@@ -956,6 +1004,7 @@ export class SixelImage {
     // skips color entries with alpha 0 ("holey pixels" - to be colored by `backgroundSelect`)
     for (let i = 0; i < this._bands.length; ++i) {
       const colors = bandColors[i];
+      /*
       const colorsArray = Array.from(colors).filter(el => !!rgbColors.get(el)[3]);
       for (let j = 0; j < colorsArray.length; ++j) {
         this._chunk[pos++] = 35; // #
@@ -967,6 +1016,10 @@ export class SixelImage {
           pos = 0;
         }
       }
+      */
+
+      this._bands[i].toSixelRow(this._chunk, [...colors], positionInPalette, cb);
+
       if (i < this._bands.length - 1) {
         this._chunk[pos++] = 45; // -
         this._chunk[pos++] = 10; // \n

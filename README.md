@@ -97,6 +97,34 @@ of the npm package, clone the repo and run `npm install` if you want to see them
 
 Decoding can also be tested in the browser after `npm start` under `localhost:8080`.
 
+## Benchmarks
+Performance is measured for typical actions based on 9-bit palette image:
+![test image](palette.png "test image")
+
+The test image repeats the palette image 8 times to form a 640x480 image with 512 colors. The unusual (and not spec conform) high number of colors was choosen to explicit test for this as an upper bound.
+
+Results:
+```
+   Context "lib/index.benchmark.js"
+      Context "SixelImage"
+         Case "fromImageData - unsafe palette" : 10 runs - average runtime: 21.61 ms
+         Case "fromImageData - safe palette" : 10 runs - average runtime: 2.15 ms
+         Case "toImageData - with fillColor" : 10 runs - average runtime: 2.97 ms
+         Case "toImageData - without fillColor" : 10 runs - average runtime: 1.34 ms
+         Case "writeString" : 10 runs - average runtime: 39.39 ms
+         Case "write" : 10 runs - average runtime: 34.61 ms
+         Case "toSixelString" : 10 runs - average runtime: 77.32 ms
+         Case "toSixelBytes" : 10 runs - average runtime: 68.91 ms
+```
+
+Note the high values for:
+- "fromImageData - unsafe palette"  
+  Caused by the additional needed ED calculation and color palette replacement. Prolly can be made faster.
+- "write"  
+  The decode parser is not yet further optimized.
+- "toSixelBytes"  
+  Encoding shows a really bad growing behavior for dimension and colors and needs a major refactoring.
+
 ### Status
 Currently alpha, tests are yet to come.
 
