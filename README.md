@@ -97,6 +97,11 @@ of the npm package, clone the repo and run `npm install` if you want to see them
 
 Decoding can also be tested in the browser after `npm start` under `localhost:8080`.
 
+Encoding can be tested with `img2sixel.js` as small cmdline tool, e.g.
+```
+$> node img2sixel.js -p16 http://leeoniya.github.io/RgbQuant.js/demo/img/bluff.jpg
+```
+
 ## Benchmarks
 Performance is measured for typical actions based on 9-bit palette image:
 ![test image](palette.png "test image")

@@ -280,8 +280,9 @@ class SixelBand {
     let oldIdx = 0;
     for (let i = 0; i < length; ++i) {
       const pos = start + i;
+      let rowOffset = 0;
       for (let row = 0; row < bandHeight; ++row) {
-        let color = source[pos + length * row];
+        let color = source[pos + rowOffset];
         if (colorMap) color = colorMap.get(color);
         if (color !== oldColor) {
           if (this.palette.has(color)) {
@@ -294,6 +295,7 @@ class SixelBand {
           oldColor = color;
         }
         this.data[c++] = oldIdx;
+        rowOffset += length;
       }
       c += 6 - bandHeight;
     }

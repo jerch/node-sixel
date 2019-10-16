@@ -20,7 +20,7 @@ const { SixelImage } = require('./lib/index');
 let quantization = 0;
 let sixelConversion = 0;
 
-async function processImage(filename) {
+async function processImage(filename, palLimit) {
   // load image
   let img;
   try {
@@ -35,7 +35,7 @@ async function processImage(filename) {
 
   // quantize and dither
   const s1 = Date.now();
-  const q = new RgbQuant({colors: MAX_PALETTE, dithKern: 'FloydSteinberg', dithSerp: true});
+  const q = new RgbQuant({colors: palLimit, dithKern: 'FloydSteinberg', dithSerp: true});
   q.sample(canvas);
   const palette = q.palette(true);
   const quantizedData = q.reduce(canvas);
@@ -55,8 +55,16 @@ async function processImage(filename) {
 }
 
 async function main() {
+  let palLimit = MAX_PALETTE;
+  for (const arg of process.argv) {
+    if (arg.startsWith('-p')) {
+      palLimit = parseInt(arg.slice(2));
+      process.argv.splice(process.argv.indexOf(arg), 1);
+      break;
+    }
+  }
   for (const filename of process.argv.slice(2)) {
-    await processImage(filename);
+    await processImage(filename, palLimit);
   }
   console.log('runtime:', {quantization, sixelConversion});
 }
