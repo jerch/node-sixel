@@ -1,5 +1,6 @@
 import { RuntimeCase, perfContext, beforeEach } from 'xterm-benchmark';
 import { toRGBA8888, SixelImage, RGBA8888, fromRGBA8888 } from './index';
+import * as fs from 'fs';
 
 
 // test data: 9-bit palette in 10x10 tiles (512 colors: 8*8*8) - 640x80 -> 6 rows => 640x480
@@ -70,41 +71,72 @@ function previewTerminal(sixelImage: SixelImage): void {
 //console.log(TEST_IMAGE.toSixelString().length);
 
 
-perfContext('SixelImage', () => {
-  new RuntimeCase('fromImageData - unsafe palette', () => {
-    const img = SixelImage.fromImageData(SOURCE8, 640, 480, PALETTE, false);
-    return img.width;
-  }, {repeat: 10}).showAverageRuntime();
-  new RuntimeCase('fromImageData - safe palette', () => {
-    const img = SixelImage.fromImageData(SOURCE8, 640, 480, PALETTE, true);
-    return img.width;
-  }, {repeat: 10}).showAverageRuntime();
+perfContext('testimage', () => {
 
-  new RuntimeCase('toImageData - with fillColor', () => {
-    return TEST_IMAGE.toImageData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, toRGBA8888(0, 0, 0));
-  }, {repeat: 10}).showAverageRuntime();
-  new RuntimeCase('toImageData - without fillColor', () => {
-    return TEST_IMAGE.toImageData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
-  }, {repeat: 10}).showAverageRuntime();
+  perfContext('pixel transfer', () => {
+    new RuntimeCase('fromImageData - unsafe palette', () => {
+      const img = SixelImage.fromImageData(SOURCE8, 640, 480, PALETTE, false);
+      return img.width;
+    }, {repeat: 10}).showAverageRuntime();
+    new RuntimeCase('fromImageData - safe palette', () => {
+      const img = SixelImage.fromImageData(SOURCE8, 640, 480, PALETTE, true);
+      return img.width;
+    }, {repeat: 10}).showAverageRuntime();
 
-  new RuntimeCase('writeString', () => {
+    new RuntimeCase('toImageData - with fillColor', () => {
+      return TEST_IMAGE.toImageData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, toRGBA8888(0, 0, 0));
+    }, {repeat: 10}).showAverageRuntime();
+    new RuntimeCase('toImageData - without fillColor', () => {
+      return TEST_IMAGE.toImageData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
+    }, {repeat: 10}).showAverageRuntime();
+  });
+
+  perfContext('decode', () => {
+    new RuntimeCase('writeString', () => {
+      const img = new SixelImage();
+      img.writeString(SIXELSTRING);
+      return img.width;
+    }, {repeat: 10}).showAverageRuntime();
+    new RuntimeCase('write', () => {
+      const img = new SixelImage();
+      img.write(SIXELBYTES);
+      return img.width;
+    }, {repeat: 10}).showAverageRuntime();
+    // }, {repeat: 1, fork: true, forkOptions: {execArgv: ['--inspect-brk']}}).showAverageRuntime();
+  });
+
+  perfContext('encode', () => {
+    new RuntimeCase('toSixelString', () => {
+      return TEST_IMAGE.toSixelString().length;
+    }, {repeat: 10}).showAverageRuntime();
+    new RuntimeCase('toSixelBytes', () => {
+      let length = 0;
+      TEST_IMAGE.toSixelBytes(c => { length += c.length; });
+      return length;
+    }, {repeat: 10}).showAverageRuntime();
+    // }, {repeat: 1, fork: true, forkOptions: {execArgv: ['--inspect-brk']}}).showAverageRuntime();
+  });
+});
+
+
+const TEST1 = fs.readFileSync(__dirname + '/../testfiles/test1_clean.sixel');
+const TEST2 = fs.readFileSync(__dirname + '/../testfiles/test2_clean.sixel');
+const SAMPSA = fs.readFileSync(__dirname + '/../testfiles/sampsa1_clean.sixel');
+
+perfContext('decode', () => {
+  new RuntimeCase('test1_clean.sixel', () => {
     const img = new SixelImage();
-    img.writeString(SIXELSTRING);
+    img.write(TEST1);
     return img.width;
   }, {repeat: 10}).showAverageRuntime();
-  new RuntimeCase('write', () => {
+  new RuntimeCase('test2_clean.sixel', () => {
     const img = new SixelImage();
-    img.write(SIXELBYTES);
+    img.write(TEST2);
     return img.width;
   }, {repeat: 10}).showAverageRuntime();
-
-  new RuntimeCase('toSixelString', () => {
-    return TEST_IMAGE.toSixelString().length;
+  new RuntimeCase('sampsa1_clean.sixel', () => {
+    const img = new SixelImage();
+    img.write(SAMPSA);
+    return img.width;
   }, {repeat: 10}).showAverageRuntime();
-  new RuntimeCase('toSixelBytes', () => {
-    let length = 0;
-    TEST_IMAGE.toSixelBytes(c => { length += c.length; });
-    return length;
-  }, {repeat: 10}).showAverageRuntime();
-  // }, {repeat: 1, fork: true, forkOptions: {execArgv: ['--inspect-brk']}}).showAverageRuntime();
 });
