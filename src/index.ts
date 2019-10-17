@@ -227,9 +227,9 @@ class SixelBand {
     let pos = this._cursor * 6;
     // resize by power of 2 if needed
     if (pos >= this.data.length) {
-      const newData = new Uint16Array(this.data.length * 2);
-      newData.set(this.data);
-      this.data = newData;
+      const data = new Uint16Array(this.data.length * 2);
+      data.set(this.data);
+      this.data = data;
     }
     // update data
     code -= 63;
