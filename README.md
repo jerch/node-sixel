@@ -111,24 +111,24 @@ The test image repeats the palette image 6 times to form a 640x480 image with 51
 Results:
 ```
    Context "lib/index.benchmark.js"
-      Context "SixelImage"
-         Case "fromImageData - unsafe palette" : 10 runs - average runtime: 26.11 ms
-         Case "fromImageData - safe palette" : 10 runs - average runtime: 8.34 ms
-         Case "toImageData - with fillColor" : 10 runs - average runtime: 2.93 ms
-         Case "toImageData - without fillColor" : 10 runs - average runtime: 1.93 ms
-         Case "writeString" : 10 runs - average runtime: 38.42 ms
-         Case "write" : 10 runs - average runtime: 34.57 ms
-         Case "toSixelString" : 10 runs - average runtime: 36.10 ms
-         Case "toSixelBytes" : 10 runs - average runtime: 29.63 ms
+      Context "testimage"
+         Context "pixel transfer"
+            Case "fromImageData - unsafe palette" : 10 runs - average runtime: 26.65 ms
+            Case "fromImageData - safe palette" : 10 runs - average runtime: 8.67 ms
+            Case "toImageData - with fillColor" : 10 runs - average runtime: 2.90 ms
+            Case "toImageData - without fillColor" : 10 runs - average runtime: 1.80 ms
+         Context "decode"
+            Case "writeString" : 10 runs - average runtime: 21.16 ms
+            Case "write" : 10 runs - average runtime: 17.09 ms
+         Context "encode"
+            Case "toSixelString" : 10 runs - average runtime: 36.94 ms
+            Case "toSixelBytes" : 10 runs - average runtime: 29.57 ms
+      Context "decode"
+         Case "test1_clean.sixel" : 10 runs - average runtime: 31.69 ms
+         Case "test2_clean.sixel" : 10 runs - average runtime: 14.57 ms
+         Case "sampsa1_clean.sixel" : 10 runs - average runtime: 81.71 ms
 ```
 
-Note the high values for:
-- "fromImageData - unsafe palette"  
-  Caused by the additional needed ED calculation and color palette replacement. Prolly can be made faster.
-- "write"  
-  The decode parser is not yet further optimized.
-- "toSixelBytes"  
-  Has already seen some optimizations (down from ~150ms to ~30ms), not sure if that can be made much faster.
 
 ### Status
 Currently alpha, tests are yet to come.

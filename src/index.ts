@@ -516,6 +516,21 @@ const SIXEL_TABLE = (() => {
   return table;
 })();
 
+class Params {
+  public length = 1;
+  public params = new Uint32Array(32);
+  public reset(): void {
+    this.params[0] = 0;
+    this.length = 1;
+  }
+  public addParam(): void {
+    this.params[this.length++] = 0;
+  }
+  public addDigit(v: number): void {
+    this.params[this.length - 1] = this.params[this.length - 1] * 10 + v;
+  }
+}
+
 
 /**
  * Sixel image class.
@@ -646,7 +661,7 @@ export class SixelImage {
   private _initialState = SixelState.DATA;
   private _currentState = this._initialState;
   public _bands: SixelBand[] = [];
-  private _params: number[] = [0];
+  private _params = new Params();
   private _colors: RGBA8888[] = Object.assign([], DEFAULT_COLORS);
   private _currentColor = this._colors[0];
   private _currentBand: SixelBand = null;
@@ -721,20 +736,20 @@ export class SixelImage {
           }
           let repeat = 0;
           for (let i = 0; i < params.length; ++i) {
-            repeat += params[i];
+            repeat += params.params[i];
           }
           band.setColor(color);
           for (let i = 0; i < repeat; ++i) {
             band.addSixel(code);
           }
           dataStart = -1;
-          params = [0];
+          params.reset();
           break;
         case SixelAction.STORE_PARAM:
-          params[params.length - 1] = params[params.length - 1] * 10 + code - 48;
+          params.addDigit(code - 48);
           break;
         case SixelAction.SHIFT_PARAM:
-          params.push(0);
+          params.addParam();
           break;
         case SixelAction.CR:
           if (~dataStart) {
@@ -765,32 +780,32 @@ export class SixelImage {
         case SixelAction.APPLY_PARAM:
           if (currentState === SixelState.COLOR) {
             if (params.length >= 5) {
-              if (params[1] === 1) {
+              if (params.params[1] === 1) {
                 // HLS color, angle as mod 260, LS in % clamped to 100
-                this._colors[params[0]] = color = normalizeHLS(
-                  params[2] % 360,
-                  Math.min(params[3], 100),
-                  Math.min(params[4], 100)
+                this._colors[params.params[0]] = color = normalizeHLS(
+                  params.params[2] % 360,
+                  Math.min(params.params[3], 100),
+                  Math.min(params.params[4], 100)
                 );
-              } else if (params[1] === 2) {
+              } else if (params.params[1] === 2) {
                 // RGB color in %, clamped to 100
-                this._colors[params[0]] = color = normalizeRGB(
-                  Math.min(params[2], 100),
-                  Math.min(params[3], 100),
-                  Math.min(params[4], 100)
+                this._colors[params.params[0]] = color = normalizeRGB(
+                  Math.min(params.params[2], 100),
+                  Math.min(params.params[3], 100),
+                  Math.min(params.params[4], 100)
                 );
               }
             } else if (params.length === 1) {
-              color = this._colors[params[0]] || this._colors[0];
+              color = this._colors[params.params[0]] || this._colors[0];
             }
           } else if (currentState === SixelState.ATTR) {
             // we only use width and height
             if (params.length === 4) {
-              this._width = params[2];
-              this._height = params[3];
+              this._width = params.params[2];
+              this._height = params.params[3];
             }
           }
-          params = [0];
+          params.reset();
           dataStart = -1;
           if ((transition & 15) === SixelState.DATA && code > 62 && code < 127) {
             dataStart = i;
