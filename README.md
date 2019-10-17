@@ -106,7 +106,7 @@ $> node img2sixel.js -p16 http://leeoniya.github.io/RgbQuant.js/demo/img/bluff.j
 Performance is measured for typical actions based on 9-bit palette image:
 ![test image](palette.png "test image")
 
-The test image repeats the palette image 6 times to form a 640x480 image with 512 colors. The unusual (and not spec conform) high number of colors was choosen to explicit test for this as an upper bound.
+The test image repeats the palette image 6 times to form a 640x480 image with 512 colors. The unusual (and not spec conform) high number of colors was chosen to explicit test for this as an upper bound.
 
 Results:
 ```
