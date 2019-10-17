@@ -206,44 +206,47 @@ class SixelBand {
     return this.data.length * 2;
   }
 
+  public setColor(color: RGBA8888): void {
+    if (color !== this._currentColor) {
+      if (this.palette.has(color)) {
+        this._currentPalIdx = this.posInPal.get(color);
+      } else {
+        this.palette.add(color);
+        this.posInPal.set(color, this.palette.size - 1);
+        this._currentPalIdx = this.palette.size - 1;
+      }
+      this._currentColor = color;
+    }
+  }
+
   /**
    * Add a sixel to the band.
    * Called by the parser for any data byte of the sixel stream.
    */
-  public addSixel(code: number, color: RGBA8888): void {
-    const pos = this._cursor * 6;
+  public addSixel(code: number): void {
+    let pos = this._cursor * 6;
     // resize by power of 2 if needed
     if (pos >= this.data.length) {
       const newData = new Uint16Array(this.data.length * 2);
       newData.set(this.data);
       this.data = newData;
     }
-    // check for palette entry, add if needed
-    if (color !== this._currentColor) {
-      if (!this.palette.has(color)) {
-        this.palette.add(color);
-        this.posInPal.set(color, this.palette.size - 1);
-        this._currentPalIdx = this.palette.size - 1;
-      } else {
-        this._currentPalIdx = this.posInPal.get(color);
-      }
-      this._currentColor = color;
-    }
     // update data
     code -= 63;
-    for (let p = 0; p < 6; ++p) {
-      if (code & (1 << p)) {
-        this.data[pos + p] = this._currentPalIdx;
-      }
-    }
-    // update cursor pos and length
+    if (code & 1) this.data[pos] = this._currentPalIdx;
+    if (code & 2) this.data[pos + 1] = this._currentPalIdx;
+    if (code & 4) this.data[pos + 2] = this._currentPalIdx;
+    if (code & 8) this.data[pos + 3] = this._currentPalIdx;
+    if (code & 16) this.data[pos + 4] = this._currentPalIdx;
+    if (code & 32) this.data[pos + 5] = this._currentPalIdx;
+    // update cursor and length
     this._cursor++;
     this.width = Math.max(this.width, this._cursor);
   }
 
-  public addSixels(data: UintTypedArray, start: number, end: number, color: RGBA8888): void {
+  public addSixels(data: UintTypedArray, start: number, end: number): void {
     for (let pos = start; pos < end; ++pos) {
-      this.addSixel(data[pos], color);
+      this.addSixel(data[pos]);
     }
   }
 
@@ -706,7 +709,8 @@ export class SixelImage {
               band = new SixelBand(this.width || 4);
               this._bands.push(band);
             }
-            band.addSixels(data, dataStart, i, color);
+            band.setColor(color);
+            band.addSixels(data, dataStart, i);
           }
           dataStart = -1;
           break;
@@ -719,8 +723,9 @@ export class SixelImage {
           for (let i = 0; i < params.length; ++i) {
             repeat += params[i];
           }
+          band.setColor(color);
           for (let i = 0; i < repeat; ++i) {
-            band.addSixel(code, color);
+            band.addSixel(code);
           }
           dataStart = -1;
           params = [0];
@@ -737,7 +742,8 @@ export class SixelImage {
               band = new SixelBand(this.width || 4);
               this._bands.push(band);
             }
-            band.addSixels(data, dataStart, i, color);
+            band.setColor(color);
+            band.addSixels(data, dataStart, i);
             dataStart = -1;
           }
           if (band) {
@@ -750,7 +756,8 @@ export class SixelImage {
               band = new SixelBand(this.width || 4);
               this._bands.push(band);
             }
-            band.addSixels(data, dataStart, i, color);
+            band.setColor(color);
+            band.addSixels(data, dataStart, i);
             dataStart = -1;
           }
           band = null;
@@ -797,7 +804,8 @@ export class SixelImage {
         band = new SixelBand(this.width || 4);
         this._bands.push(band);
       }
-      band.addSixels(data, dataStart, end, color);
+      band.setColor(color);
+      band.addSixels(data, dataStart, end);
     }
 
     // save state and buffers
