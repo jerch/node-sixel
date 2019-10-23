@@ -1,10 +1,16 @@
-import { RuntimeCase, perfContext, beforeEach } from 'xterm-benchmark';
-import { toRGBA8888, SixelImage, RGBA8888, fromRGBA8888 } from './index';
+/**
+ * Copyright (c) 2019 Joerg Breitbart.
+ * @license MIT
+ */
+
+import { RuntimeCase, perfContext } from 'xterm-benchmark';
+import { toRGBA8888, SixelDecoder, introducer, FINALIZER, sixelEncode } from './index';
 import * as fs from 'fs';
+import { RGBA8888 } from './Types';
 
 
 // test data: 9-bit palette in 10x10 tiles (512 colors: 8*8*8) - 640x80 -> 6 rows => 640x480
-const {SOURCE32, SOURCE8, PALETTE, TEST_IMAGE, SIXELSTRING, SIXELBYTES} = (() => {
+const {SOURCE32, SOURCE8, PALETTE, SIXELSTRING, SIXELBYTES} = (() => {
   const channelValues = Array.from(Array(8).keys()).map(v => v * 32);
   const palette: RGBA8888[] = [];
   for (let r = 0; r < channelValues.length; ++r) {
@@ -27,15 +33,13 @@ const {SOURCE32, SOURCE8, PALETTE, TEST_IMAGE, SIXELSTRING, SIXELBYTES} = (() =>
     }
   }
   const source8 = new Uint8Array(source32.buffer);
-  const testImage = SixelImage.fromImageData(source8, 640, 480, palette);
-  const sixelString = testImage.toSixelString();
+  const sixelString = sixelEncode(source8, 640, 480, palette);
   const bytes = new Uint8Array(sixelString.length);
   for (let i = 0; i < sixelString.length; ++i) bytes[i] = sixelString.charCodeAt(i);
   return {
     SOURCE32: source32,
     SOURCE8: source8,
     PALETTE: palette,
-    TEST_IMAGE: testImage,
     SIXELSTRING: sixelString,
     SIXELBYTES: bytes
   };
@@ -43,14 +47,14 @@ const {SOURCE32, SOURCE8, PALETTE, TEST_IMAGE, SIXELSTRING, SIXELBYTES} = (() =>
 const TARGET = new Uint8ClampedArray(512 * 10 * 10 * 6 * 4);
 
 // preview test image
-function preview(sixelImage: SixelImage): void {
+function preview(dec: SixelDecoder): void {
   const { createCanvas, createImageData } = require('canvas');
   const fs = require('fs');
   const open = require('open');
-  const width = sixelImage.width;
-  const height = sixelImage.height;
+  const width = dec.width;
+  const height = dec.height;
   const imageData = createImageData(width, height);
-  sixelImage.toImageData(imageData.data, width, height);
+  dec.toPixelData(imageData.data, width, height);
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
   ctx.putImageData(imageData, 0, 0);
@@ -61,58 +65,47 @@ function preview(sixelImage: SixelImage): void {
   out.on('finish', () => open(targetFile));
 }
 
-function previewTerminal(sixelImage: SixelImage): void {
-  console.log(SixelImage.introducer(1));
-  console.log(sixelImage.toSixelString());
-  console.log(SixelImage.finalizer());
+// preview in terminal
+function previewTerminal(sixels: string): void {
+  console.log(introducer(1));
+  console.log(sixels);
+  console.log(FINALIZER);
 }
-//preview(TEST_IMAGE);
-//previewTerminal(TEST_IMAGE);
-//console.log(TEST_IMAGE.toSixelString().length);
 
 
 perfContext('testimage', () => {
-
   perfContext('pixel transfer', () => {
-    new RuntimeCase('fromImageData - unsafe palette', () => {
-      const img = SixelImage.fromImageData(SOURCE8, 640, 480, PALETTE, false);
-      return img.width;
+    const dec = new SixelDecoder();
+    dec.decode(SIXELBYTES);
+    new RuntimeCase('toPixelData - with fillColor', () => {
+      return dec.toPixelData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, toRGBA8888(0, 0, 0));
     }, {repeat: 10}).showAverageRuntime();
-    new RuntimeCase('fromImageData - safe palette', () => {
-      const img = SixelImage.fromImageData(SOURCE8, 640, 480, PALETTE, true);
-      return img.width;
-    }, {repeat: 10}).showAverageRuntime();
-
-    new RuntimeCase('toImageData - with fillColor', () => {
-      return TEST_IMAGE.toImageData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, toRGBA8888(0, 0, 0));
-    }, {repeat: 10}).showAverageRuntime();
-    new RuntimeCase('toImageData - without fillColor', () => {
-      return TEST_IMAGE.toImageData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
+    new RuntimeCase('toPixelData - without fillColor', () => {
+      return dec.toPixelData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
     }, {repeat: 10}).showAverageRuntime();
   });
 
   perfContext('decode', () => {
-    new RuntimeCase('writeString', () => {
-      const img = new SixelImage();
-      img.writeString(SIXELSTRING);
-      return img.width;
+    new RuntimeCase('decode', () => {
+      const dec = new SixelDecoder();
+      dec.decode(SIXELBYTES);
+      return dec.width;
     }, {repeat: 10}).showAverageRuntime();
-    new RuntimeCase('write', () => {
-      const img = new SixelImage();
-      img.write(SIXELBYTES);
-      return img.width;
+    new RuntimeCase('decodeString', () => {
+      const dec = new SixelDecoder();
+      dec.decodeString(SIXELSTRING);
+      return dec.width;
     }, {repeat: 10}).showAverageRuntime();
-    // }, {repeat: 1, fork: true, forkOptions: {execArgv: ['--inspect-brk']}}).showAverageRuntime();
+    new RuntimeCase('decode + pixel transfer', () => {
+      const dec = new SixelDecoder();
+      dec.decode(SIXELBYTES);
+      return dec.toPixelData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
+    }, {repeat: 10}).showAverageRuntime();
   });
 
   perfContext('encode', () => {
-    new RuntimeCase('toSixelString', () => {
-      return TEST_IMAGE.toSixelString().length;
-    }, {repeat: 10}).showAverageRuntime();
-    new RuntimeCase('toSixelBytes', () => {
-      let length = 0;
-      TEST_IMAGE.toSixelBytes(c => { length += c.length; });
-      return length;
+    new RuntimeCase('sixelEncode', () => {
+      return sixelEncode(SOURCE8, 640, 480, PALETTE).length;
     }, {repeat: 10}).showAverageRuntime();
     // }, {repeat: 1, fork: true, forkOptions: {execArgv: ['--inspect-brk']}}).showAverageRuntime();
   });
@@ -123,20 +116,20 @@ const TEST1 = fs.readFileSync(__dirname + '/../testfiles/test1_clean.sixel');
 const TEST2 = fs.readFileSync(__dirname + '/../testfiles/test2_clean.sixel');
 const SAMPSA = fs.readFileSync(__dirname + '/../testfiles/sampsa1_clean.sixel');
 
-perfContext('decode', () => {
+perfContext('decode - testfiles', () => {
   new RuntimeCase('test1_clean.sixel', () => {
-    const img = new SixelImage();
-    img.write(TEST1);
-    return img.width;
+    const dec = new SixelDecoder();
+    dec.decode(TEST1);
+    return dec.width;
   }, {repeat: 10}).showAverageRuntime();
   new RuntimeCase('test2_clean.sixel', () => {
-    const img = new SixelImage();
-    img.write(TEST2);
-    return img.width;
+    const dec = new SixelDecoder();
+    dec.decode(TEST2);
+    return dec.width;
   }, {repeat: 10}).showAverageRuntime();
   new RuntimeCase('sampsa1_clean.sixel', () => {
-    const img = new SixelImage();
-    img.write(SAMPSA);
-    return img.width;
+    const dec = new SixelDecoder();
+    dec.decode(SAMPSA);
+    return dec.width;
   }, {repeat: 10}).showAverageRuntime();
 });

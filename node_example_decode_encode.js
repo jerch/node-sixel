@@ -1,4 +1,4 @@
-const { SixelImage } = require('./lib/index');
+const { SixelDecoder, introducer, FINALIZER, sixelEncode } = require('./lib/index');
 const fs = require('fs');
 
 /**
@@ -13,22 +13,22 @@ const fs = require('fs');
  */
 fs.readFile('testfiles/biplane_clean.six', (err, data) => {
   // decode from file
-  const image = new SixelImage();
-  image.write(data);
+  const image = new SixelDecoder();
+  image.decode(data);
 
   // insert a new line in terminal
   // bug with boticelli image - jumps one line up in xterm?
   console.log();
 
   // write SIXEL DCS sequence introducer
-  console.log(SixelImage.introducer(1));
+  console.log(introducer(1));
   try {
     // encode to SIXEL data and write to output
-    console.log(image.toSixelString());
-    // or with bytes (~20% faster)
-    // image.toSixelBytes(chunk => process.stdout.write(chunk));
+    const data = new Uint8Array(image.width * image.height * 4);
+    image.toPixelData(data, image.width, image.height);
+    console.log(sixelEncode(data, image.width, image.height, image.palette));
   } finally {
     // never forget the finalizer or the terminal will "hang"
-    console.log(SixelImage.finalizer());
+    console.log(FINALIZER);
   }
 })

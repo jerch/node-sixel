@@ -1,4 +1,4 @@
-const { SixelImage, toRGBA8888 } = require('./lib/index');
+const { SixelDecoder, toRGBA8888 } = require('./lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
@@ -19,8 +19,8 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
   // terminal object needed for the sequence parser
   // we are only interested in the DCS calls, thus skip the other methods
   const terminal = {
-    // some background color
-    backgroundColor: toRGBA8888(255, 255, 0, 255),
+    // some background color (red to make the effect obvious)
+    backgroundColor: toRGBA8888(255, 0, 0, 255),
 
     // some state to determine whether DCS payload should go to sixel image
     // the state is needed since the input might contain other non DCS sequences
@@ -35,7 +35,7 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
         // if set to 1 we should set fillColor to 0 (leave transparent)
         // else set to background color from the terminal
         // hint: try changing the test file or the color to see the effect of this setting
-        image = new SixelImage(params[1] === 1 ? 0 : this.backgroundColor);
+        image = new SixelDecoder(params[1] === 1 ? 0 : this.backgroundColor);
         this.inSixel = true;
       }
     },
@@ -43,7 +43,7 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
     // inst_P: called for DCS payload chunks
     inst_P(chunk) {
       if (this.inSixel && image) {
-        image.writeString(chunk);
+        image.decodeString(chunk);
       }
     },
 
@@ -58,7 +58,7 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
 
         // transfer bitmap data to ImageData object
         const imageData = createImageData(image.width, image.height);
-        image.toImageData(imageData.data, image.width, image.height);
+        image.toPixelData(imageData.data, image.width, image.height);
 
         // draw ImageData to canvas
         const canvas = createCanvas(image.width, image.height);
