@@ -1,4 +1,4 @@
-const { SixelImage } = require('./lib/index');
+const { sixelEncode, SixelDecoder, introducer, FINALIZER } = require('./lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
@@ -49,7 +49,7 @@ ctx.stroke();
 /**
  * For proper results we have to quantize and dither the image
  * before we can convert it to SIXEL.
- * We simply use rgbquant in the example:
+ * We use rgbquant in this example:
  */
 const RgbQuant = require('rgbquant');
 const q = new RgbQuant({colors: 16, dithKern: 'FloydSteinberg', dithSerp: true});
@@ -58,45 +58,34 @@ const palette = q.palette(true);
 const quantizedData = q.reduce(canvas);
 
 // finally create the SixelImage
-const sixelImage = SixelImage.fromImageData(quantizedData, 204, 202, palette);
-
-/**
- * You might want to skip the expensive quantization step (not recommended),
- * either because the image data is already in reduced colors (simple graphics)
- * or the output quality does not matter.
- * The palette should closely ressemble the colors in the image, otherwise 16 default
- * colors are used. Color replacement is done by simple euclidean distance.
- * Note: Some terminal have strict palette restrictions (16 colors for xterm).
- */
-// const imageData = ctx.getImageData(0, 0, 204, 202);
-// const sImage = SixelImage.fromImageData(imageData.data, 204, 202); // assumes 16 default colors (prolly not wanted)
-// const sImage = SixelImage.fromImageData(imageData.data, 204, 202, customPalette); // uses customPalette
-
+const sixelData = sixelEncode(quantizedData, 204, 202, palette);
 
 // output SIXEL data to terminal (Terminal must have SIXEL enabled!)
-process.stdout.write(SixelImage.introducer(1));
+console.log(introducer(1));
 try {
-  sixelImage.toSixelBytes(chunk => process.stdout.write(chunk));
+  console.log(sixelData);
 } finally {
   // never forget the finalizer or the terminal will "hang"
   // ensure it by an exception clause (in case `toSixelBytes` throws an error)
-  process.stdout.write(SixelImage.finalizer());
+  console.log(FINALIZER);
 }
 
 /**
  * For comparison we also output the image to a PNG file.
  */
-const width = sixelImage.width;
-const height = sixelImage.height;
+const dec = new SixelDecoder();
+dec.decodeString(sixelData);
+const width = dec.width;
+const height = dec.height;
 
 // transfer bitmap data to ImageData object
-const imageData2 = createImageData(width, height);
-sixelImage.toImageData(imageData2.data, width, height);
+const imageData = createImageData(width, height);
+dec.toPixelData(imageData.data, width, height);
 
 // draw ImageData to canvas
 const canvas2 = createCanvas(width, height);
 const ctx2 = canvas2.getContext('2d');
-ctx2.putImageData(imageData2, 0, 0);
+ctx2.putImageData(imageData, 0, 0);
 
 // write to some file and show it
 const targetFile = __dirname + '/node_encode_output.png';

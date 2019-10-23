@@ -15,7 +15,7 @@ const BACKGROUND_SELECT = 0;
 
 const { loadImage, createCanvas } = require('canvas');
 const RgbQuant = require('rgbquant');
-const { SixelImage } = require('./lib/index');
+const { introducer, FINALIZER, sixelEncode } = require('./lib/index');
 
 let quantization = 0;
 let sixelConversion = 0;
@@ -43,14 +43,15 @@ async function processImage(filename, palLimit) {
   
   // output to terminal
   const s2 = Date.now();
-  const sixelImage = SixelImage.fromImageData(quantizedData, img.width, img.height, palette);
+
   console.log(`${filename}:`);
-  console.log(SixelImage.introducer(BACKGROUND_SELECT));
+  console.log(introducer(BACKGROUND_SELECT));
   try {
-    console.log(sixelImage.toSixelString());
+    console.log(sixelEncode(quantizedData, img.width, img.height, palette));
   } finally {
-    console.log(SixelImage.finalizer());
+    console.log(FINALIZER);
   }
+
   sixelConversion += Date.now() - s2;
 }
 

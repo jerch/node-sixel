@@ -14,3 +14,4 @@ lib/*.test.*
 src/*.benchmark.*
 src/*.test.*
 img2sixel.js
+.vscode

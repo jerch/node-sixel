@@ -1,4 +1,4 @@
-const { SixelImage } = require('./lib/index');
+const { SixelDecoder } = require('./lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
@@ -15,8 +15,8 @@ const open = require('open');
  */
 fs.readFile('testfiles/screen_clean.six', (err, data) => {
   // decode from file
-  const sixelImage = new SixelImage();
-  sixelImage.write(data);
+  const sixelImage = new SixelDecoder();
+  sixelImage.decode(data);
 
   // image metrics
   const width = sixelImage.width;
@@ -24,7 +24,7 @@ fs.readFile('testfiles/screen_clean.six', (err, data) => {
 
   // transfer bitmap data to ImageData object
   const imageData = createImageData(width, height);
-  sixelImage.toImageData(imageData.data, width, height);
+  sixelImage.toPixelData(imageData.data, width, height);
 
   // draw ImageData to canvas
   const canvas = createCanvas(width, height);

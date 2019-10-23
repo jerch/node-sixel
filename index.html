@@ -22,6 +22,7 @@
   <button onclick="setImage('oriole2_clean.six')">oriole2</button>
   <button onclick="setImage('rose16_clean.six')">rose16</button>
   <button onclick="setImage('sampsa1_clean.sixel')">sampsa</button>
+  <button onclick="setImage('sampsa_reencoded_clean.six')">sampsa reencoded</button>
   <button onclick="setImage('screen_clean.six')">screen</button>
   <button onclick="setImage('sem_clean.six')">sem</button>
   <button onclick="setImage('space_clean.six')">space</button>
@@ -62,6 +63,9 @@ let imgS = null;
  * example how to get the img data
  */
 function drawImage(img) {
+  if (!img.height || !img.width) {
+    return;
+  }
   const canvas = document.getElementById('output');
   const ctx = canvas.getContext('2d');
   // resize canvas to show full image
@@ -69,7 +73,7 @@ function drawImage(img) {
   canvas.height = img.height;
   // grab imagedata
   const target = ctx.getImageData(0, 0, img.width, img.height);
-  img.toImageData(
+  img.toPixelData(
     // target metrics
     target.data, img.width, img.height,
     // dx, dy
@@ -102,14 +106,14 @@ async function setImage(s) {
   clearInterval(drawHandle);
 
   // create image
-  const img = new sixel.SixelImage();
+  const img = new sixel.SixelDecoder();
   imgS = img;
 
   // read in
   let start;
   if (s === 'wiki') {
     start = new Date();
-    img.writeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??-#1!14!14!14@');
+    img.decodeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??-#1!14!14!14@');
   } else {
     const response = await fetch('/testfiles/' + s);
     const bytes = new Uint8Array(await response.arrayBuffer());
@@ -120,7 +124,7 @@ async function setImage(s) {
       const endTens = bytes.length - (bytes.length % 10);
       while (i < endTens) {
         if (drawHandle !== localHandle) return;
-        img.write(bytes, i, i + 10);
+        img.decode(bytes, i, i + 10);
         document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
         document.getElementById('swidth').value = img.width;
         document.getElementById('sheight').value = img.height;
@@ -128,11 +132,11 @@ async function setImage(s) {
         i += 10;
       }
       if (bytes.length % 10) {
-        img.write(bytes, endTens, bytes.length);
+        img.decode(bytes, endTens, bytes.length);
       }
       clearInterval(drawHandle);
     } else {
-      img.write(bytes);
+      img.decode(bytes);
     }
   }
   document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
