@@ -318,7 +318,7 @@ export class SixelDecoder {
     public palette: RGBA8888[] = Object.assign([], PALETTE_VT340_COLOR),
     public paletteLimit: number = 65536)
   {
-    this._currentBand = new SixelBand(4);
+    this._currentBand = new SixelBand();
     this.bands.push(this._currentBand);
   }
 
@@ -383,7 +383,7 @@ export class SixelDecoder {
    * Same as `decode` but with string data instead.
    */
   public decodeString(data: string, start: number = 0, end: number = data.length): void {
-    if (!this._buffer || this._buffer.length < end -start) {
+    if (!this._buffer || this._buffer.length < end - start) {
       this._buffer = new Uint8Array(end - start);
     }
     let j = 0;
@@ -442,25 +442,30 @@ export class SixelDecoder {
              */
             if (params.length === 1) {
               // color select with modulo palette length
-              color = this.palette[params.params[0] % this.palette.length] | 0;
+              color = this.palette[params.params[0] % this.paletteLimit] >>> 0;
             } else if (params.length === 5) {
               // range test for all params
               // cancel whole command if not passing all
-              const PcPassed = params.params[1] < 3;
-              const PxPassed = params.params[1] === 1 ? params.params[2] <= 360 :  params.params[2] <= 100;
-              const PyPassed = params.params[2] <= 100;
-              const PzPassed = params.params[3] <= 100;
-              if (PcPassed && PxPassed && PyPassed && PzPassed) {
-                if (params.params[1] === 1) {
-                  // HLS color
-                  this.palette[params.params[0] % this.paletteLimit] = color = normalizeHLS(params.params[2], params.params[3], params.params[4]);
-                } else if (params.params[1] === 2) {
-                  // RGB color
-                  this.palette[params.params[0] % this.paletteLimit] = color = normalizeRGB(params.params[2], params.params[3], params.params[4]);
+              if (params.params[1] < 3
+                  && params.params[1] === 1 ? params.params[2] <= 360 :  params.params[2] <= 100
+                  && params.params[2] <= 100
+                  && params.params[3] <= 100)
+              {
+                switch (params.params[1]) {
+                  case 2:
+                    // RGB
+                    this.palette[params.params[0] % this.paletteLimit] = color = normalizeRGB(
+                      params.params[2], params.params[3], params.params[4]);
+                    break;
+                  case 1:
+                    // HLS
+                    this.palette[params.params[0] % this.paletteLimit] = color = normalizeHLS(
+                      params.params[2], params.params[3], params.params[4]);
+                    break;
+                  case 0:
+                    // illegal, only apply color switch
+                    color = this.palette[params.params[0] % this.paletteLimit] >>> 0;
                 }
-                // color select with modulo palette length
-                // also executed for Pu = 0
-                color = this.palette[params.params[0] % this.palette.length] | 0;
               }
             }
           } else if (currentState === SixelState.ATTR) {

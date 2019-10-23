@@ -22,7 +22,7 @@ import { toRGBA8888, fromRGBA8888, alpha, nearestColorIndex } from './Colors';
  * @see https://www.vt100.net/docs/vt3xx-gp/chapter14.html
  * @param backgroundSelect background color setting (default = 0)
  */
-export function introducer(backgroundSelect: number = 0): string {
+export function introducer(backgroundSelect: 0 | 1 | 2 = 0): string {
   return `\x1bP0;${backgroundSelect};q`;
 }
 
@@ -173,12 +173,12 @@ export function sixelEncode(
 {
   // some sanity checks
   if (!data.length || !width || !height) {
-    return;
+    return '';
   }
   if (width * height * 4 !== data.length) {
     throw new Error('wrong geometry of data');
   }
-  if (!palette.length) {
+  if (!palette || !palette.length) {
     throw new Error('palette must not be empty');
   }
 
