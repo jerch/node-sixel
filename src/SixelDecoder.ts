@@ -259,14 +259,14 @@ class Params {
  * The class provides image attributes `width` and `height`.
  * With `toPixelData` the pixel data can be copied to an typed array
  * for further processing.
- * 
+ *
  * `write` and `writeString` decode SIXEL data streamlined, therefore it
  * is possible to grab partial images during transmission.
- * 
+ *
  * Note that the class is meant to run behind an escape sequence parser,
  * thus the data should only be the real data part of the sequence and not
  * contain the sequence introducer and finalizer.
- * 
+ *
  * Further note that this class does not deal with custom pixel sizes/ratios or
  * grid sizes. It always assumes a 1:1 ratio and returns the pixel data without
  * any grid size notion. If you need strict pixel ratio and grid size handling
@@ -290,17 +290,17 @@ export class SixelDecoder {
 
   /**
    * Create a new decoder instance.
-   * 
+   *
    * `fillColor` sets the color of pixels that are not encoded by SIXEL data (background).
    * Depending on the second parameter of the DCS SIXEL sequence (background select - P2)
    * this should either be set to the terminal default background color (P2 = 0 or 2),
    * or to 0 to leave these pixels untouched (P2 = 1). Default is black.
-   * 
+   *
    * `palette` should contain the default palette of the terminal as `RGBA8888[]`.
    * The library provides 3 default palettes - 16 color VT340, 16 greyscale VT340 and
    * 256 ANSI colors (default is 16 color VT340). SIXEL data is likely to alter color entries of the palette,
    * thus make sure to clone your palette if the changes should not be terminal wide (default).
-   * 
+   *
    * `paletteLimit` sets a hard limit of allowed color entries. Any color definitions beyond
    * this limit will be mapped back into the allowed palette size (modulo). Historically
    * terminals had certain hardware limits to represent colors at once (VT340 up to 16 colors registers).
@@ -308,7 +308,7 @@ export class SixelDecoder {
    * alter this value only if you need strict old device compatibility. By default
    * `paletteLimit` is set to a rather high value (65536) to allow more fine grained colors.
    * The SIXEL spec (DEC STD 070) demands at least 256 registers.
-   * 
+   *
    * @param fillColor background fill color
    * @param palette default palette to start with
    * @param paletteLimit Hard limit for palette slots (default 65536). Values higher than the limit get mapped back.
@@ -357,7 +357,7 @@ export class SixelDecoder {
    * `realHeight` is more in line with DEC STD 070, by which image handling should
    * not rely on raster attributes. We still default to `height` in `toPixelData` since
    * the raster attributes most likely reflect the image creator's intention better.
-   * 
+   *
    * Note: The height of the last band is handled special - if it contains no image data
    * (empty line of 6 pixel rows) we interpret it as an intentional empty line feed,
    * thus count the full height as 6 pixels. For partial data we calculate the real height.
@@ -370,7 +370,7 @@ export class SixelDecoder {
   /**
    * Get current memory usage of the image data in bytes.
    * Can be used to restrict image handling if memory is limited.
-   * 
+   *
    * Note: This only accounts the image pixel data storage, the real value
    * will be slightly higher due to some additional JS object overhead.
    */
@@ -397,7 +397,7 @@ export class SixelDecoder {
    * Decodes SIXEL bytes and updates the image data. This is done as a stream,
    * therefore it is possible to grab partially transmitted images.
    * `data` can be any array like type with single byte values per index position.
-   * 
+   *
    * Note: This method is only meant for the data part of a SIXEL DCS sequence,
    * to properly handle full sequences consider running `SixelDecoder` behind
    * an escape sequence parser.
@@ -431,7 +431,7 @@ export class SixelDecoder {
              *  - Pu:     0 illegal, 1 HLS, 2 RGB
              *  - Px:     0 - 100 (R in RGB), 0 - 360 (H in HLS)
              *  - Py/Pz:  0 - 100
-             * 
+             *
              * rules:
              *  - Pc only     --> color select (+ mapping back for higher numbers)
              *  - all params  --> color definition + color select
@@ -524,7 +524,7 @@ export class SixelDecoder {
    * `sx` and `sy` mark the source offset, `swidth` and `sheight` the size to be copied.
    * With `fillColor` the default fill color set in the ctor can be overwritten.
    * Returns the modified `target`.
-   * 
+   *
    * Note: This method does not respect custom aspect ratios, it always assumes 1:1.
    * Use `rasterRatioNumerator` and `rasterRatioDenominator` on the returned data
    * to apply different pixel shapes / ratios afterwards.

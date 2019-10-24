@@ -51,7 +51,7 @@ export function nearestColorIndex(color: RGBA8888, palette: RGBColor[]): number 
   const r = red(color);
   const g = green(color);
   const b = blue(color);
-  
+
   let min = Number.MAX_SAFE_INTEGER;
   let idx = -1;
 
@@ -144,7 +144,7 @@ export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
  * 15 Gray 75%    80  80  80
  * ```
  * (*) less saturated
- * 
+ *
  * @see https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
 */
 export const PALETTE_VT340_COLOR = [
@@ -187,7 +187,7 @@ export const PALETTE_VT340_COLOR = [
  * 14 Gray-5    33  33  33
  * 15 White 7   46  46  46
  * ```
- * 
+ *
  * @see https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
  */
 export const PALETTE_VT340_GREY = [
@@ -211,7 +211,7 @@ export const PALETTE_VT340_GREY = [
 
 /**
  * 256 predefined ANSI colors.
- * 
+ *
  * @see https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
  */
 export const PALETTE_ANSI_256 = (() => {
@@ -252,7 +252,7 @@ export const PALETTE_ANSI_256 = (() => {
 
 /**
  * Black by default.
- * 
+ *
  * Used whenever a background or fill color is needed and not explicitly set.
  */
 export const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0, 0, 0, 255);

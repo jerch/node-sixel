@@ -10,15 +10,15 @@ import { toRGBA8888, fromRGBA8888, alpha, nearestColorIndex } from './Colors';
 /**
  * Create escape sequence introducer for SIXEL.
  * Should be written to the terminal before any SIXEL data.
- * 
+ *
  * A SIXEL DSC sequence understands 3 parameters, but only the second one (background select) is supported
  * by some terminals. Therefore only this parameter is exposed.
- * 
+ *
  * backgroundSelect:
  *  - 0   device default action (most terminals will apply background color)
  *  - 1   no action (no change to zero bit value grid positions)
  *  - 2   set to background color - zero bit value grid positions are set to background color (device dependent).
- * 
+ *
  * @see https://www.vt100.net/docs/vt3xx-gp/chapter14.html
  * @param backgroundSelect background color setting (default = 0)
  */
@@ -74,7 +74,7 @@ function processBand(
   // array to hold band local color idx
   // only those are processed and written to output
   // whenever a new color enters here we have to extend the accu/code handling below
-  const usedColorIdx : number[] = [];
+  const usedColorIdx: number[] = [];
 
   // storage for SIXELs per color in band
   const targets: string[][] = [];
@@ -144,20 +144,20 @@ function processBand(
 
 /**
  * sixelEncode - encode pixel data to SIXEL string.
- * 
+ *
  * The colors of the image get aligned to the given palette, unmatched colors will be translated
  * by euclidean distance. Without proper quantization beforehand this leads to poor output quality,
  * thus consider using a quantizer with custom palette creation and dithering.
  * For transparency only an alpha value of 0 will be respected as fully transparent,
  * other alpha values are set to fully opaque (255). Transparent pixels will be colored by the
  * terminal later on depending on the `backgroundSelect` setting of the introducer.
- * 
+ *
  * To be in line with the SIXEL spec (DEC STD 070) `palette` should not contain more than 256 colors.
  * Note that older devices limit color registers even further (16 on VT340). Furthermore a high
  * number of colors will have a penalty on creation time, temporary memory usage and
  * the size of the SIXEL data. For simple graphics a rather small palette (16 to 64) might do,
  * for complicated pictures higher should work with 128+.
- * 
+ *
  * @param data    pixel data
  * @param width   width of the image
  * @param height  height of the image
@@ -209,7 +209,7 @@ export function sixelEncode(
   if (rasterAttributes) {
     chunks.push(`"1;1;${width};${height}`);
   }
-  
+
   // create palette and write color entries
   for (let [idx, [r, g, b]] of paletteRGB.entries()) {
     chunks.push(`#${idx};2;${Math.round(r / 255 * 100)};${Math.round(g / 255 * 100)};${Math.round(b / 255 * 100)}`);

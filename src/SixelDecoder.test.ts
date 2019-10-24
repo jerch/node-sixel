@@ -279,7 +279,7 @@ describe('SixelDecoder', () => {
       });
       it('REPEATED_DRAW', () => {
         let rep = -1;
-        dec.bands[0].put = (code, color, repeat) => { rep = repeat; }
+        dec.bands[0].put = (code, color, repeat) => { rep = repeat; };
         dec.decodeString('!12345@');
         assert.equal(rep, 12345);
         dec.decodeString('!0@');

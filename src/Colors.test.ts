@@ -55,7 +55,7 @@ describe('Colors', () => {
       assert.deepEqual(fromRGBA8888(-0xedcba988), BIG_ENDIAN ? [0x12, 0x34, 0x56, 0x78] : [0x78, 0x56, 0x34, 0x12]);
     });
     it('strip values to 32bit', () => {
-      assert.deepEqual(fromRGBA8888(0x1234567890), BIG_ENDIAN ? [0x12, 0x34, 0x56, 0x78] : [0x90, 0x78, 0x56, 0x34])
+      assert.deepEqual(fromRGBA8888(0x1234567890), BIG_ENDIAN ? [0x12, 0x34, 0x56, 0x78] : [0x90, 0x78, 0x56, 0x34]);
     });
   });
   describe('channels', () => {
@@ -86,9 +86,9 @@ describe('Colors', () => {
     assert.equal(normalizeHLS(0, 46, 29), normalizeRGB(33, 33, 60) - 0x020101);         // mismatch B: 2 G: 1 R: 1
     assert.equal(normalizeHLS(120, 43, 39), normalizeRGB(60, 26, 26) + 0x010100 - 0x1); // mismatch B: -1 G: -1 R: 1
     assert.equal(normalizeHLS(240, 46, 29), normalizeRGB(33, 60, 33) - 0x010201);       // mismatch B: 1 G: 2 R: 1
-    //assert.equal(normalizeHLS(60, 46, 29), normalizeRGB(60, 33, 60));
-    //assert.equal(normalizeHLS(300, 46, 29), normalizeRGB(33, 60, 60));
-    //assert.equal(normalizeHLS(180, 46, 29), normalizeRGB(60, 60, 33));
+    // assert.equal(normalizeHLS(60, 46, 29), normalizeRGB(60, 33, 60));
+    // assert.equal(normalizeHLS(300, 46, 29), normalizeRGB(33, 60, 60));
+    // assert.equal(normalizeHLS(180, 46, 29), normalizeRGB(60, 60, 33));
     assert.equal(normalizeHLS(0, 80, 0), normalizeRGB(80, 80, 80));
 
     // basic HLS tests
@@ -105,4 +105,4 @@ describe('Colors', () => {
     assert.equal(nearestColorIndex(toRGBA8888(100, 100, 100), p), 3);
     assert.equal(nearestColorIndex(toRGBA8888(170, 100, 50), p), 4);
   });
-})
+});
