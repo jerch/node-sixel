@@ -16,6 +16,7 @@ const BACKGROUND_SELECT = 0;
 const { loadImage, createCanvas } = require('canvas');
 const RgbQuant = require('rgbquant');
 const { introducer, FINALIZER, sixelEncode } = require('./lib/index');
+const { quantize } = require('upng-js');
 
 let quantization = 0;
 let sixelConversion = 0;
@@ -39,6 +40,12 @@ async function processImage(filename, palLimit) {
   q.sample(canvas);
   const palette = q.palette(true);
   const quantizedData = q.reduce(canvas);
+
+  //const data = ctx.getImageData(0,0,img.width, img.height).data;
+  //const res = quantize(data, palLimit);
+  //const quantizedData = new Uint8Array(res.abuf);
+  //const palette = res.plte.map(el => el.est.rgba);
+  
   quantization += Date.now() - s1;
   
   // output to terminal

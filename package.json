@@ -24,7 +24,9 @@
   },
   "author": "Joerg Breitbart <j.breitbart@netzkolchose.de>",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "upng-js": "^2.1.0"
+  },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/chai": "^4.2.11",
