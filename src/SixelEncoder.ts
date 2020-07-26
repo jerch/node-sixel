@@ -247,6 +247,7 @@ function processBandIndexed(
 {
   // reset buffers
   last.fill(-1);
+  code.fill(0);
   accu.fill(1);
   slots.fill(-1);
 
