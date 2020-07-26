@@ -24,3 +24,13 @@ export type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
  * RGB color as array of channels (without alpha channel).
  */
 export type RGBColor = [number, number, number];
+
+/**
+ * Return value from internal quantizer.
+ */
+export interface IQuantResult {
+  /** image data as palette indices (max. 2^16 colors supported) */
+  indices: Uint16Array;
+  /** array with quantized colors */
+  palette: number[]
+}

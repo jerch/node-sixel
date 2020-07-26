@@ -5,6 +5,7 @@
 
 import { RGBA8888, RGBColor } from './Types';
 
+
 // system endianess
 export const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
 
@@ -25,6 +26,7 @@ export function alpha(n: RGBA8888): number {
   return (BIG_ENDIAN ? n : n >>> 24) & 0xFF;
 }
 
+
 /**
  * Convert RGB channels to native color RGBA8888.
  */
@@ -34,6 +36,7 @@ export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RG
     : ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
 }
 
+
 /**
  * Convert native color to [r, g, b].
  */
@@ -42,6 +45,7 @@ export function fromRGBA8888(color: RGBA8888): [number, number, number, number] 
     ? [color >>> 24, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]
     : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >>> 24];
 }
+
 
 /**
  * Get index of nearest color in `palette` for `color`.
@@ -70,6 +74,7 @@ export function nearestColorIndex(color: RGBA8888, palette: RGBColor[]): number 
 
   return idx;
 }
+
 
 // color conversions
 function hue2rgb(p: number, q: number, t: number): number {
@@ -101,6 +106,7 @@ function hlsToRgb(h: number, l: number, s: number): RGBA8888 {
     : (0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255)) >>> 0;  // ABGR32
 }
 
+
 /**
  * Normalize SIXEL RGB values (percent based, 0-100) to RGBA8888.
  */
@@ -110,6 +116,7 @@ export function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
     : (0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255)) >>> 0;  // ABGR32
 }
 
+
 /**
  * Normalize SIXEL HLS values to RGBA8888. Applies hue correction of +240°.
  */
@@ -117,6 +124,7 @@ export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
   // Note: hue value is turned by 240° in VT340
   return hlsToRgb((h + 240) / 360 - 1, l / 100, s / 100);
 }
+
 
 /**
  * default palettes

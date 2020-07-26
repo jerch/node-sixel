@@ -6,4 +6,4 @@
 export { RGBA8888, RGBColor } from './Types';
 export { toRGBA8888, fromRGBA8888, DEFAULT_BACKGROUND, PALETTE_ANSI_256, PALETTE_VT340_COLOR, PALETTE_VT340_GREY } from './Colors';
 export { SixelDecoder } from './SixelDecoder';
-export { sixelEncode, introducer, FINALIZER } from './SixelEncoder';
+export { sixelEncode, introducer, FINALIZER, image2sixel } from './SixelEncoder';
