@@ -33,7 +33,7 @@ async function processImage(filename, palLimit) {
   // use image2sixel with internal quantizer
   const data = ctx.getImageData(0, 0, img.width, img.height).data;
   console.log(`${filename}:`);
-  console.log(image2sixel(data, img.width, img.height, palLimit, palLimit >= 128, BACKGROUND_SELECT));
+  console.log(image2sixel(data, img.width, img.height, palLimit, BACKGROUND_SELECT));
 
   //// alternatively use custom quantizer library
   //const RgbQuant = require('rgbquant');

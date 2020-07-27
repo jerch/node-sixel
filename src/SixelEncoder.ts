@@ -410,12 +410,11 @@ export function image2sixel(
   width: number,
   height: number,
   max_colors: number = 256,
-  fast: boolean = max_colors >= 128,
   backgroundSelect: 0 | 1 | 2 = 0): string
 {
   // FIXME: sixelEncodeIndexed does not yet handle transparent pixels
   // FIXME: dithering in reduce does not yet respect image width/height
-  const { indices, palette } = reduce(data, width, max_colors, fast);
+  const { indices, palette } = reduce(data, width, max_colors);
   const sixelData = sixelEncodeIndexed(indices, width, height, palette);
   return [introducer(backgroundSelect), sixelData, FINALIZER].join('');
 }
