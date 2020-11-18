@@ -5,6 +5,7 @@
 
 import { RGBA8888, RGBColor } from './Types';
 import { toRGBA8888, fromRGBA8888, alpha, nearestColorIndex } from './Colors';
+import { reduce } from './Quantizer';
 
 
 /**
@@ -227,4 +228,188 @@ export function sixelEncode(
   }
   chunks.push(bands.join('-\n'));
   return chunks.join('');
+}
+
+
+/**
+ * Create SIXEL data for a 6 pixel band.
+ * Same as `processBand`, but for correctly indexed colors.
+ */
+function processBandIndexed(
+  indices: Uint16Array,
+  start: number,
+  bandHeight: number,
+  width: number,
+  last: Int8Array,
+  code: Uint8Array,
+  accu: Uint16Array,
+  slots: Int16Array): string
+{
+  // reset buffers
+  last.fill(-1);
+  code.fill(0);
+  accu.fill(1);
+  slots.fill(-1);
+
+  // array to hold band local color idx
+  // only those are processed and written to output
+  // whenever a new color enters here we have to extend the accu/code handling below
+  const usedColorIdx: number[] = [];
+
+  // storage for SIXELs per color in band
+  const targets: string[][] = [];
+
+  for (let i = 0; i < width; ++i) {
+    const p = start + i;
+    let rowOffset = 0;
+    code.fill(0, 0, usedColorIdx.length);
+    for (let row = 0; row < bandHeight; ++row) {
+      const idx = indices[p + rowOffset] + 1;   // FIXME: handle alpha = 0 case
+      if (slots[idx] === -1) {
+        targets.push([]);
+        // if not at start catch up by writing 0s up to i for new color
+        // (happens during shift below)
+        if (i) {
+          last[usedColorIdx.length] = 0;
+          accu[usedColorIdx.length] = i;
+        }
+        slots[idx] = usedColorIdx.length;
+        usedColorIdx.push(idx);
+      }
+      // update codes for a row of 6 pixels
+      code[slots[idx]] |= 1 << row;
+      rowOffset += width;
+    }
+    // code/last/accu shift, updates SIXELs per color in band
+    for (let j = 0; j < usedColorIdx.length; ++j) {
+      if (code[j] === last[j]) {
+        accu[j]++;
+      } else {
+        if (~last[j]) {
+          targets[j].push(codeToSixel(last[j], accu[j]));
+        }
+        last[j] = code[j];
+        accu[j] = 1;
+      }
+    }
+
+  }
+  // handle remaining SIXELs to EOL
+  for (let j = 0; j < usedColorIdx.length; ++j) {
+    if (last[j]) {
+      targets[j].push(codeToSixel(last[j], accu[j]));
+    }
+  }
+  // write sixel chunk for every color in band
+  const result: string[] = [];
+  for (let j = 0; j < usedColorIdx.length; ++j) {
+    if (!usedColorIdx[j]) continue; // skip background
+    result.push('#' + (usedColorIdx[j] - 1) + targets[j].join('') + '$');
+  }
+  return result.join('');
+}
+
+/**
+ * sixelEncodeIndexed - encode indexed image data to SIXEL string.
+ * Same as `sixelEncode`, but for correctly indexed colors.
+ */
+export function sixelEncodeIndexed(
+  indices: Uint16Array,
+  width: number,
+  height: number,
+  palette: RGBA8888[] | RGBColor[],
+  rasterAttributes: boolean = true): string
+{
+  // some sanity checks
+  if (!indices.length || !width || !height) {
+    return '';
+  }
+  if (width * height !== indices.length) {
+    throw new Error('wrong geometry of data');
+  }
+  if (!palette || !palette.length) {
+    throw new Error('palette must not be empty');
+  }
+
+  // cleanup/prepare palettes
+  // paletteWithZero: holds background color in slot 0
+  // paletteRGB: list of [R, G, B] for ED calc
+  const paletteWithZero: RGBA8888[] = [0];
+  const paletteRGB: RGBColor[] = [];
+  for (let i = 0; i < palette.length; ++i) {
+    let color = palette[i];
+    if (typeof color === 'number') {
+      if (!alpha(color)) continue;
+      color = toRGBA8888(...fromRGBA8888(color));
+    } else {
+      color = toRGBA8888(...color);
+    }
+    if (!~paletteWithZero.indexOf(color)) {
+      paletteWithZero.push(color);
+      paletteRGB.push(fromRGBA8888(color).slice(0, -1) as RGBColor);
+    }
+  }
+
+  // SIXEL data storage
+  const chunks: string[] = [];
+
+  // write raster attributes (includes image dimensions) - " Pan ; Pad ; Ph ; Pv
+  // note: Pan/Pad are set to dummies (not eval'd by any terminal)
+  if (rasterAttributes) {
+    chunks.push(`"1;1;${width};${height}`);
+  }
+
+  // create palette and write color entries
+  for (let [idx, [r, g, b]] of paletteRGB.entries()) {
+    chunks.push(`#${idx};2;${Math.round(r / 255 * 100)};${Math.round(g / 255 * 100)};${Math.round(b / 255 * 100)}`);
+  }
+
+  // temp buffers to hold various color data on band level
+  // last: last seen SIXEL code per color
+  // code: current SIXEL code per color
+  // accu: count rows with equal SIXEL codes per color
+  // slots: palette color --> idx in usedColorIdx
+  const last = new Int8Array(paletteRGB.length + 1);
+  const code = new Uint8Array(paletteRGB.length + 1);
+  const accu = new Uint16Array(paletteRGB.length + 1);
+  const slots = new Int16Array(paletteRGB.length + 1);
+
+  // process in bands of 6 pixels
+  const bands: string[] = [];
+  for (let b = 0; b < height; b += 6) {
+    bands.push(processBandIndexed(indices, b * width, height - b >= 6 ? 6 : height - b, width,
+      last, code, accu, slots));
+  }
+  chunks.push(bands.join('-\n'));
+  return chunks.join('');
+}
+
+
+/**
+ * Convenient function to create a full SIXEL escape sequence for given image data (alpha).
+ *
+ * Quantization is done by the internal quantizer, with dithering done on 4 neighboring pixels
+ * for speed reasons, which works great for real pictures to level out hard color plane borders,
+ * but might show moiré or striping artefacts on color gradients.
+ * Currently the dithering is not configurable, resort to custom quantizer
+ * library in conjunction with `sixelEncode` if you observe dithering issues.
+ *
+ * @param data              pixel data
+ * @param width             width of the image
+ * @param height            height of the image
+ * @param maxColors         max colors of the created palette
+ * @param backgroundSelect  background select behavior for transparent pixels
+ */
+export function image2sixel(
+  data: Uint8Array | Uint8ClampedArray,
+  width: number,
+  height: number,
+  maxColors: number = 256,
+  backgroundSelect: 0 | 1 | 2 = 0): string
+{
+  // FIXME: sixelEncodeIndexed does not yet handle transparent pixels
+  // FIXME: dithering in reduce does not yet respect image width/height
+  const { indices, palette } = reduce(data, width, maxColors);
+  const sixelData = sixelEncodeIndexed(indices, width, height, palette);
+  return [introducer(backgroundSelect), sixelData, FINALIZER].join('');
 }

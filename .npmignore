@@ -1,6 +1,7 @@
 testfiles
 dist
 *.png
+*.jpg
 node_example*
 index.html
 sixel_textcursor.sh

@@ -14,11 +14,8 @@ const BACKGROUND_SELECT = 0;
 
 
 const { loadImage, createCanvas } = require('canvas');
-const RgbQuant = require('rgbquant');
-const { introducer, FINALIZER, sixelEncode } = require('./lib/index');
+const { introducer, FINALIZER, sixelEncode, image2sixel } = require('./lib/index');
 
-let quantization = 0;
-let sixelConversion = 0;
 
 async function processImage(filename, palLimit) {
   // load image
@@ -33,26 +30,23 @@ async function processImage(filename, palLimit) {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0);
 
-  // quantize and dither
-  const s1 = Date.now();
-  const q = new RgbQuant({colors: palLimit, dithKern: 'FloydSteinberg', dithSerp: true});
-  q.sample(canvas);
-  const palette = q.palette(true);
-  const quantizedData = q.reduce(canvas);
-  quantization += Date.now() - s1;
-  
-  // output to terminal
-  const s2 = Date.now();
-
+  // use image2sixel with internal quantizer
+  const data = ctx.getImageData(0, 0, img.width, img.height).data;
   console.log(`${filename}:`);
-  console.log(introducer(BACKGROUND_SELECT));
-  try {
-    console.log(sixelEncode(quantizedData, img.width, img.height, palette));
-  } finally {
-    console.log(FINALIZER);
-  }
+  console.log(image2sixel(data, img.width, img.height, palLimit, BACKGROUND_SELECT));
 
-  sixelConversion += Date.now() - s2;
+  // alternatively use custom quantizer library
+  // const RgbQuant = require('rgbquant');
+  // const q = new RgbQuant({colors: palLimit, dithKern: 'FloydSteinberg', dithSerp: true});
+  // q.sample(canvas);
+  // const palette = q.palette(true);
+  // const quantizedData = q.reduce(canvas);
+  // console.log(`${filename}:`);
+  // console.log([
+  //   introducer(BACKGROUND_SELECT),
+  //   sixelEncode(quantizedData, img.width, img.height, palette),
+  //   FINALIZER
+  // ].join(''));
 }
 
 async function main() {
@@ -67,7 +61,6 @@ async function main() {
   for (const filename of process.argv.slice(2)) {
     await processImage(filename, palLimit);
   }
-  console.log('runtime:', {quantization, sixelConversion});
 }
 
 main();

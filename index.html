@@ -52,6 +52,9 @@
   <span id="stats"></span>
   <br><br>
   <canvas id="output" style="border: 1px solid black"></canvas>
+  <br><br>
+  Reencoded with img2sixel:<br>
+  <canvas id="output2" style="border: 1px solid black"></canvas>
   <script src="/dist/bundle.js"></script>
   <script id="sampsa" type="application/json"></script>
   <script>
@@ -85,6 +88,18 @@ function drawImage(img) {
     // fill color
     sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
   ctx.putImageData(target, 0, 0);
+
+  // test encoding by re-encoding the output above
+  const reEncoded = sixel.image2sixel(target.data, img.width, img.height);
+  const six2 = new sixel.SixelDecoder();
+  six2.decodeString(reEncoded.slice(7, -2)); // strip off enclosing escape sequence
+  const canvas2 = document.getElementById('output2');
+  canvas2.width = six2.width;
+  canvas2.height = six2.height;
+  const ctx2 = canvas2.getContext('2d');
+  const target2 = ctx.getImageData(0, 0, six2.width, six2.height);
+  six2.toPixelData(target2.data, six2.width, six2.height);
+  ctx2.putImageData(target2, 0, 0);
 }
 
 function hexColorToRGB(color) {
