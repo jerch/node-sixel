@@ -386,23 +386,18 @@ export function sixelEncodeIndexed(
 
 
 /**
- * Convenient method to create a full SIXEL escape sequence for given image data.
+ * Convenient function to create a full SIXEL escape sequence for given image data (alpha).
  *
- * Quantization is done by the internal quantizer with dithering. By default the quantizer
- * will use a faster color approximation for `max_colors >= 128`. This works great for real
- * pictures, but might lead to visable color artefacts on graphics. In that case you can switch
- * to the exact color matching with `fast = false`.
- *
- * Dithering is only done on 4 neighboring pixels, which again works great for real pictures
- * to level out hard color plane borders, but might show moiré or striping artefacts on
- * color gradients. Currently the dithering is not configurable, resort to custom quantizer
+ * Quantization is done by the internal quantizer, with dithering done on 4 neighboring pixels
+ * for speed reasons, which works great for real pictures to level out hard color plane borders,
+ * but might show moiré or striping artefacts on color gradients.
+ * Currently the dithering is not configurable, resort to custom quantizer
  * library in conjunction with `sixelEncode` if you observe dithering issues.
  *
  * @param data              pixel data
  * @param width             width of the image
  * @param height            height of the image
  * @param maxColors         max colors of the created palette
- * @param fast              whether to use fast color approximation
  * @param backgroundSelect  background select behavior for transparent pixels
  */
 export function image2sixel(

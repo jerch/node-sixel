@@ -12,14 +12,14 @@ For decoding the library provides a class `SixelDecoder` with the following prop
     terminal's default colors (defaults to 16 VT340 colors). `paletteLimit` can be used to restrict the color registers.
 
 - `width: number`  
-    Pixel width of the image. Updates during `write`. Other than stated in the SIXEL specification (DEC STD 070)
+    Pixel width of the image. Updates during `decode`. Other than stated in the SIXEL specification (DEC STD 070)
     a width from raster attributes takes precedence, thus if a SIXEL data stream contains raster attributes
     with a valid horizontal extend, width will always be set to this value, even for half transmitted images.
     Also overlong sixel bands (a row of 6 vertical pixels) will be stripped to the raster attribute width.
     If no raster attributes were transmitted (used in earlier SIXEL variant) width will be set to the longest sixel band width found.
 
 - `height: number`  
-    Pixel height of the image. Updates during `write`. Height is either set from a valid vertical extend in
+    Pixel height of the image. Updates during `decode`. Height is either set from a valid vertical extend in
     raster attributes, or grows with the number of sixel bands found in the data stream (number of bands * 6).
     Raster attributes again have precedence over number of bands (also see `width`).
 
@@ -52,11 +52,10 @@ For decoding the library provides a class `SixelDecoder` with the following prop
     `data` can be any array like type with single byte values per index position.  
     Note: Normally SIXEL data is embedded in a DCS escape sequence. To properly handle the full sequence with introducer
     and finalizer you should to use an escape sequence parser (like `node-ansiparser` or the parser found in `xterm.js`).
-    The `write` method of `SixelImage` is only meant for the data part
-    (also see example `node_example_decode_full_sequence.js`).
+    Note that this method is only meant for the data part of a SIXEL sequence (also see example `node_example_decode_full_sequence.js`).
 
 - `decodeString(data: string, start: number = 0, end: number = data.length): void`  
-    Same as `write` but with string data instead. For better performance use `write`.
+    Same as `decode` but with string data instead. For better performance use `decode`.
 
 - `toPixelData(target: Uint8ClampedArray, width: number, height: number, dx: number = 0, dy: number = 0, sx: number = 0, sy: number = 0, swidth: number = this.width, sheight: number = this.height, fillColor: RGBA8888 = this.fillColor): Uint8ClampedArray`  
     Writes pixel data to pixel array `target`. A pixel array can be obtained from `ImageData.data`, e.g. from a canvas.
@@ -67,6 +66,11 @@ For decoding the library provides a class `SixelDecoder` with the following prop
 ### Encoding
 
 For encoding the library provides the following properties:
+
+- `image2sixel(data: Uint8Array | Uint8ClampedArray, width: number, height: number, maxColors: number = 256,backgroundSelect: 0 | 1 | 2 = 0): string`  
+    Convenient function to create a full SIXEL escape sequence for given image data (note this is still alpha).
+
+    Quantization is done by the internal quantizer, with dithering on 4 neighboring pixels for speed reasons, which works great for real pictures to level out hard color plane borders, but might show moiré or striping artefacts on color gradients. Currently the dithering is not configurable, resort to custom quantizer library in conjunction with `sixelEncode` if you observe dithering issues.
 
 - `sixelEncode(data: Uint8ClampedArray | Uint8Array, width: number, height: number, palette: RGBA8888[] | RGBColor[], rasterAttributes: boolean = true): string`  
     Encodes pixel data to a SIXEL string. `data` should be an array like type with RGBA pixel data. `width` and `height` must contain the pixel dimension of `data`. `palette` should contain the used colors in `data` and must not be empty. To avoid poor output quality consider using a quantizer with dithering and palette creation before converting to SIXEL. See `node_example_encode.js` for an example usage in conjunction with `rgbquant`.
