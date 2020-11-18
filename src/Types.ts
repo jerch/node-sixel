@@ -32,5 +32,5 @@ export interface IQuantResult {
   /** image data as palette indices (max. 2^16 colors supported) */
   indices: Uint16Array;
   /** array with quantized colors */
-  palette: number[]
+  palette: number[];
 }

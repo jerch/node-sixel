@@ -401,7 +401,7 @@ export function sixelEncodeIndexed(
  * @param data              pixel data
  * @param width             width of the image
  * @param height            height of the image
- * @param max_colors        max colors of the created palette
+ * @param maxColors         max colors of the created palette
  * @param fast              whether to use fast color approximation
  * @param backgroundSelect  background select behavior for transparent pixels
  */
@@ -409,12 +409,12 @@ export function image2sixel(
   data: Uint8Array | Uint8ClampedArray,
   width: number,
   height: number,
-  max_colors: number = 256,
+  maxColors: number = 256,
   backgroundSelect: 0 | 1 | 2 = 0): string
 {
   // FIXME: sixelEncodeIndexed does not yet handle transparent pixels
   // FIXME: dithering in reduce does not yet respect image width/height
-  const { indices, palette } = reduce(data, width, max_colors);
+  const { indices, palette } = reduce(data, width, maxColors);
   const sixelData = sixelEncodeIndexed(indices, width, height, palette);
   return [introducer(backgroundSelect), sixelData, FINALIZER].join('');
 }

@@ -5,9 +5,9 @@
  * Parts taken from UPNG:
  * MIT License, Copyright (c) 2017 Photopea
  */
-import { red, green, blue, fromRGBA8888 } from "./Colors";
-import { IQuantResult, RGBColor, RGBA8888 } from "./Types";
-const UPNGQuantize = require('../upng').quantize;
+import { red, green, blue, fromRGBA8888 } from './Colors';
+import { IQuantResult, RGBColor, RGBA8888 } from './Types';
+import { quantize as UPNGQuantize } from './upng';
 
 
 function clamp8Bit(value: number): number {
@@ -15,10 +15,10 @@ function clamp8Bit(value: number): number {
 }
 
 
-function applyError(value: number, r:number, g:number, b:number): number {
+function applyError(value: number, r: number, g: number, b: number): number {
   return ((0xFF00 | clamp8Bit(blue(value) + b))
-          << 8    | clamp8Bit(green(value) + g))
-          << 8    | clamp8Bit(red(value) + r);
+    << 8 | clamp8Bit(green(value) + g))
+    << 8 | clamp8Bit(red(value) + r);
 }
 
 
@@ -49,7 +49,7 @@ export function reduce(
 
   const indices = new Uint16Array(data32.length);
   const len = data32.length;
-  for(let i = 0; i < len; ++i) {
+  for (let i = 0; i < len; ++i) {
     const v = data32[i];
     const r = red(v);
     const g = green(v);
@@ -65,9 +65,9 @@ export function reduce(
     let eg = (g - green(vp)) >> 2;
     let eb = (b - blue(vp)) >> 2;
 
-    //FIXME: respect idx overflow / left and right border
-    data32[i + 1] = applyError(data32[i + 1], er, eg, eb)
-    data32[i + width] = applyError(data32[i + width], er, eg, eb)
+    // FIXME: respect idx overflow / left and right border
+    data32[i + 1] = applyError(data32[i + 1], er, eg, eb);
+    data32[i + width] = applyError(data32[i + width], er, eg, eb);
 
     er >>= 1;
     eg >>= 1;
@@ -83,8 +83,9 @@ export function reduce(
  * Class to do nearest palette color matching with 16x16x16 boxes.
  */
 class ColorMatcher {
-  private _boxes: {[key: number]: number[]} = {};
-  private _boxes2: {[key: number]: number[]} = {};
+  private _boxes: { [key: number]: number[] } = {};
+  private _boxes2: { [key: number]: number[] } = {};
+
   constructor(public palette: RGBColor[], radius: number = 14, radius2: number = 42) {
     // limit: search sphere to add palette points from
     // limit2: outer search sphere for uncertain area
@@ -96,10 +97,11 @@ class ColorMatcher {
       const x = i >> 8;
       const y = i >> 4 & 15;
       const z = i & 15;
-      this._nearestPoints(i, (x<<4) + 8, (y<<4) + 8, (z<<4) + 8, limit, limit2);
+      this._nearestPoints(i, (x << 4) + 8, (y << 4) + 8, (z << 4) + 8, limit, limit2);
     }
   }
-  private _nearestPoints(box: number, r: number, g: number, b: number, limit: number, limit2: number): void {  
+
+  private _nearestPoints(box: number, r: number, g: number, b: number, limit: number, limit2: number): void {
     let min = Number.MAX_SAFE_INTEGER;
     let idx = -1;
     const pointIndices: number[] = [];
@@ -123,12 +125,14 @@ class ColorMatcher {
     this._boxes[box] = pointIndices;
     this._boxes2[box] = pointIndices2;
   }
+
   private _distance(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
     const dr = r1 - r2;
     const dg = g1 - g2;
     const db = b1 - b2;
     return dr * dr + dg * dg + db * db;
   }
+
   public nearest(color: RGBA8888): number {
     const r = red(color);
     const g = green(color);

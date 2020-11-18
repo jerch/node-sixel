@@ -35,18 +35,18 @@ async function processImage(filename, palLimit) {
   console.log(`${filename}:`);
   console.log(image2sixel(data, img.width, img.height, palLimit, BACKGROUND_SELECT));
 
-  //// alternatively use custom quantizer library
-  //const RgbQuant = require('rgbquant');
-  //const q = new RgbQuant({colors: palLimit, dithKern: 'FloydSteinberg', dithSerp: true});
-  //q.sample(canvas);
-  //const palette = q.palette(true);
-  //const quantizedData = q.reduce(canvas);
-  //console.log(`${filename}:`);
-  //console.log([
-  //  introducer(BACKGROUND_SELECT),
-  //  sixelEncode(quantizedData, img.width, img.height, palette),
-  //  FINALIZER
-  //].join(''));
+  // alternatively use custom quantizer library
+  // const RgbQuant = require('rgbquant');
+  // const q = new RgbQuant({colors: palLimit, dithKern: 'FloydSteinberg', dithSerp: true});
+  // q.sample(canvas);
+  // const palette = q.palette(true);
+  // const quantizedData = q.reduce(canvas);
+  // console.log(`${filename}:`);
+  // console.log([
+  //   introducer(BACKGROUND_SELECT),
+  //   sixelEncode(quantizedData, img.width, img.height, palette),
+  //   FINALIZER
+  // ].join(''));
 }
 
 async function main() {
