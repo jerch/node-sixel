@@ -3,8 +3,9 @@
  * @license MIT
  */
 
-import { RGBA8888, UintTypedArray } from './Types';
+import { RGBA8888, SixelAction, SixelState, UintTypedArray } from './Types';
 import { PALETTE_VT340_COLOR, DEFAULT_BACKGROUND, normalizeHLS, normalizeRGB } from './Colors';
+import { Params } from './Params';
 
 // lookup table for for index offsets of SIXEL codes
 const OFFSETS: number[][] = [];
@@ -35,7 +36,6 @@ class SixelBand {
    * Get current memory usage of the band.
    */
   public get memUsage(): number {
-    // FIXME: calc other stuff too?
     return this.data.length * 4;
   }
 
@@ -149,24 +149,6 @@ class SixelBand {
  * * need to draw here (inspect next state)
  */
 
-const enum SixelState {
-  DATA = 0,
-  COMPRESSION = 1,
-  ATTR = 2,
-  COLOR = 3
-}
-
-const enum SixelAction {
-  IGNORE = 0,
-  DRAW = 1,
-  CR = 2,
-  LF = 3,
-  REPEATED_DRAW = 4,
-  STORE_PARAM = 5,
-  SHIFT_PARAM = 6,
-  APPLY_PARAM = 7
-}
-
 function r(low: number, high: number): number[] {
   let c = high - low;
   const arr = new Array(c);
@@ -232,25 +214,6 @@ const SIXEL_TABLE = (() => {
   table.add(45, SixelState.COLOR, SixelAction.APPLY_PARAM, SixelState.DATA);
   return table;
 })();
-
-/**
- * Params storage.
- * Used during parsing to hold up to 32 params of a SIXEL command.
- */
-class Params {
-  public length = 1;
-  public params = new Uint32Array(32);
-  public reset(): void {
-    this.params[0] = 0;
-    this.length = 1;
-  }
-  public addParam(): void {
-    this.params[this.length++] = 0;
-  }
-  public addDigit(v: number): void {
-    this.params[this.length - 1] = this.params[this.length - 1] * 10 + v;
-  }
-}
 
 
 /**
@@ -484,6 +447,9 @@ export class SixelDecoder {
           // read ahead: if next state is DATA we already got a char to handle here
           if ((transition & 15) === SixelState.DATA && code > 62 && code < 127) {
             band.put(code - 63, color, 1);
+          } else if (code === 45) {
+            band = new SixelBand(this.width || 4);
+            this.bands.push(band);
           }
           break;
         case SixelAction.REPEATED_DRAW:
@@ -580,5 +546,10 @@ export class SixelDecoder {
       }
     }
     return target;
+  }
+
+  public get data32(): Uint32Array {
+    // FIXME: to be implemented
+    return new Uint32Array();
   }
 }

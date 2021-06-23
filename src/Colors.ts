@@ -38,7 +38,7 @@ export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RG
 
 
 /**
- * Convert native color to [r, g, b].
+ * Convert native color to [r, g, b, a].
  */
 export function fromRGBA8888(color: RGBA8888): [number, number, number, number] {
   return (BIG_ENDIAN)

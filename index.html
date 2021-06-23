@@ -51,7 +51,11 @@
   <br><br>
   <span id="stats"></span>
   <br><br>
+  Default decoder:<br>
   <canvas id="output" style="border: 1px solid black"></canvas>
+  <br><br>
+  L2 decoder (wasm):<br>
+  <canvas id="output_wasm" style="border: 1px solid black"></canvas>
   <br><br>
   Reencoded with img2sixel:<br>
   <canvas id="output2" style="border: 1px solid black"></canvas>
@@ -61,6 +65,39 @@
 
 let drawHandle = null;
 let imgS = null;
+let imgWasm = null;
+let wasmDecoder = null;
+sixel.WasmDecoderAsync().then(dec => wasmDecoder = dec);
+
+function decodeWasm(bytes) {
+  const start = new Date();
+  const dim = new sixel.DimensionDecoder().decode(bytes);
+  console.log('L2 attrs:', dim);
+  if (sixel.canUseWasm(dim.width, dim.height, 4096)) {
+    wasmDecoder.init(
+      dim.width,
+      dim.height,
+      sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value))  
+    );
+    wasmDecoder.decode(bytes);
+  }
+  drawImageL2(wasmDecoder.data32, wasmDecoder.width, wasmDecoder.height);
+  console.log('L2 conversion:', (new Date()) - start);
+}
+
+function drawImageL2(data, width, height) {
+  if (!height || !width) {
+    return;
+  }
+  const canvas = document.getElementById('output_wasm');
+  const ctx = canvas.getContext('2d');
+  // resize canvas to show full image
+  canvas.width = width;
+  canvas.height = height;
+  const target = new ImageData(width, height);
+  new Uint32Array(target.data.buffer).set(data);
+  ctx.putImageData(target, 0, 0);
+}
 
 /**
  * example how to get the img data
@@ -75,7 +112,8 @@ function drawImage(img) {
   canvas.width = img.width;
   canvas.height = img.height;
   // grab imagedata
-  const target = ctx.getImageData(0, 0, img.width, img.height);
+  // const target = ctx.getImageData(0, 0, img.width, img.height);
+  const target = new ImageData(img.width, img.height);
   img.toPixelData(
     // target metrics
     target.data, img.width, img.height,
@@ -90,21 +128,33 @@ function drawImage(img) {
   ctx.putImageData(target, 0, 0);
 
   // test encoding by re-encoding the output above
-  const reEncoded = sixel.image2sixel(target.data, img.width, img.height);
-  const six2 = new sixel.SixelDecoder();
-  six2.decodeString(reEncoded.slice(7, -2)); // strip off enclosing escape sequence
-  const canvas2 = document.getElementById('output2');
-  canvas2.width = six2.width;
-  canvas2.height = six2.height;
-  const ctx2 = canvas2.getContext('2d');
-  const target2 = ctx.getImageData(0, 0, six2.width, six2.height);
-  six2.toPixelData(target2.data, six2.width, six2.height);
-  ctx2.putImageData(target2, 0, 0);
+  //const reEncoded = sixel.image2sixel(target.data, img.width, img.height);
+  //const dim = new sixel.DimensionDecoder().decodeString(reEncoded.slice(7, -2));
+  //if (sixel.canUseWasm(dim.width, dim.height, 4096)) {
+  //  wasmDecoder.init(dim.width, dim.height, 0)  
+  //  wasmDecoder.decodeString(reEncoded.slice(7, -2));
+  //  const canvas2 = document.getElementById('output2');
+  //  canvas2.width = dim.width;
+  //  canvas2.height = dim.height;
+  //  const ctx2 = canvas2.getContext('2d');
+  //  const target2 = ctx.getImageData(0, 0, dim.width, dim.height);
+  //  new Uint32Array(target2.data.buffer).set(wasmDecoder.data32);
+  //  ctx2.putImageData(target2, 0, 0);
+  //} else {
+  //  const six2 = new sixel.SixelDecoder();
+  //  six2.decodeString(reEncoded.slice(7, -2)); // strip off enclosing escape sequence
+  //  const canvas2 = document.getElementById('output2');
+  //  canvas2.width = six2.width;
+  //  canvas2.height = six2.height;
+  //  const ctx2 = canvas2.getContext('2d');
+  //  const target2 = ctx.getImageData(0, 0, six2.width, six2.height);
+  //  six2.toPixelData(target2.data, six2.width, six2.height);
+  //  ctx2.putImageData(target2, 0, 0);
+  //}
 }
 
 function hexColorToRGB(color) {
   const value = parseInt(color.slice(1), 16);
-  console.log();
   return [
   (value >> 16) & 0xFF,
   (value >> 8) & 0xFF,
@@ -132,6 +182,7 @@ async function setImage(s) {
   } else {
     const response = await fetch('/testfiles/' + s);
     const bytes = new Uint8Array(await response.arrayBuffer());
+    decodeWasm(bytes);
     start = new Date();
     if (document.getElementById('slow').checked) {
       let localHandle = drawHandle = setInterval(() => drawImage(img), 100);

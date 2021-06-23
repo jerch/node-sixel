@@ -2,9 +2,18 @@
 
 SIXEL image decoding / encoding library for node and the browser.
 
+
 ### Decoding
 
-For decoding the library provides a class `SixelDecoder` with the following properties:
+For decoding the library provides two decoder classes with slightly different semantics.
+
+
+#### DefaultDecoder
+
+The `DefaultDecoder` is a general purpose decoder written in Typescript. It can decode level1 and level2
+SIXEL data with reasonable speed and without any further preparations. It currently only supports _printerMode_(_terminalMode_ with proper shared/private palette semantics is planned).
+
+Properties of `DefaultDecoder`:
 
 - `constructor(public fillColor: RGBA8888 = DEFAULT_BACKGROUND, public palette: RGBA8888[] = PALETTE_VT340_COLOR, public paletteLimit: number = 65536)`  
     Creates a new SIXEL image. The optional `fillColor` (default black) is used to fill
@@ -63,6 +72,20 @@ For decoding the library provides a class `SixelDecoder` with the following prop
     `sx`, `sy` (offset in source) and `swidth`, `sheight` (area in source) for cropping/clipping. `fillColor` has the same
     meaning as in the constructor, explicit setting it to 0 will leave non encoded pixels unaltered (pixels, that were not colored in the SIXEL data). This can be used for a transparency like effect (background/previous pixel value will remain). Returns the altered `target`.
 
+
+#### WasmDecoder
+
+The `WasmDecoder` is a level 2 only decoder written in C and compiled to WebAssembly. While it can decode image data much faster (see benchmarks below), it imposes several usage restrictions:
+
+- limited to 1536 x 1536 pixels and 4096 palette colors (compile time settings)
+- level 2 only, needs proper pixel dimensions (can be obtained from raster attributes with `DimensionDecoder`)
+- always truncates images to pixel dimensions (not spec conform)
+
+Other than the default decoder, `WasmDecoder` is meant to be re-used with follow-up images, which lowers the need to spawn webassembly instances.
+
+TODO: document properties + canUsewasm + DimensionDecoder
+
+
 ### Encoding
 
 For encoding the library provides the following properties:
@@ -90,6 +113,7 @@ For encoding the library provides the following properties:
     Finalizes the SIXEL escape sequence. Write this, when the SIXEL data stream has ended.
     Note that a SIXEL escape sequences changes the operation mode of a terminal,
     forgetting the finalizer might leave the terminal in an unrecoverable state.
+
 
 ### Convenient Properties
 
@@ -133,27 +157,46 @@ The test image repeats the palette image 6 times to form a 640x480 image with 51
 
 Results:
 ```
-   Context "lib/index.benchmark.js"
+   Context "./lib/index.benchmark.js"
       Context "testimage"
          Context "pixel transfer"
-            Case "toPixelData - with fillColor" : 10 runs - average runtime: 1.86 ms
-            Case "toPixelData - without fillColor" : 10 runs - average runtime: 1.28 ms
-         Context "decode"
-            Case "decode" : 10 runs - average runtime: 4.22 ms
-            Case "decodeString" : 10 runs - average runtime: 6.60 ms
-            Case "decode + pixel transfer" : 10 runs - average runtime: 4.33 ms
+            Case "toPixelData - with fillColor" : 20 runs - average runtime: 1.42 ms
+            Case "toPixelData - without fillColor" : 20 runs - average runtime: 1.12 ms
+         Context "decode (DefaultDecoder)"
+            Case "decode" : 20 runs - average runtime: 4.34 ms
+            Case "decodeString" : 20 runs - average runtime: 4.62 ms
+            Case "decode + pixel transfer" : 20 runs - average runtime: 3.39 ms
+         Context "decode (WasmDecoder)"
+            Case "decode" : 20 runs - average runtime: 1.35 ms
+            Case "decodeString" : 20 runs - average runtime: 1.81 ms
          Context "encode"
-            Case "sixelEncode" : 10 runs - average runtime: 25.92 ms
-      Context "decode - testfiles"
-         Case "test1_clean.sixel" : 10 runs - average runtime: 17.96 ms
-         Case "test2_clean.sixel" : 10 runs - average runtime: 8.01 ms
-         Case "sampsa1_clean.sixel" : 10 runs - average runtime: 43.30 ms
+            Case "sixelEncode" : 20 runs - average runtime: 25.10 ms
+      Context "decode - testfiles (DefaultDecoder)"
+         Case "test1_clean.sixel" : 20 runs - average runtime: 16.75 ms
+         Case "test1_clean.sixel" : 20 runs - average throughput: 37.70 MB/s
+         Case "test2_clean.sixel" : 20 runs - average runtime: 7.23 ms
+         Case "test2_clean.sixel" : 20 runs - average throughput: 45.48 MB/s
+         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 16.53 ms
+         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 39.57 MB/s
+         Case "FullHD 12bit noise" : 20 runs - average runtime: 228.52 ms
+         Case "FullHD 12bit noise" : 20 runs - average throughput: 67.84 MB/s
+      Context "decode - testfiles (WasmDecoder)"
+         Case "test1_clean.sixel" : 20 runs - average runtime: 9.99 ms
+         Case "test1_clean.sixel" : 20 runs - average throughput: 61.25 MB/s
+         Case "test2_clean.sixel" : 20 runs - average runtime: 4.16 ms
+         Case "test2_clean.sixel" : 20 runs - average throughput: 76.79 MB/s
+         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 10.54 ms
+         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 61.23 MB/s
+         Case "FullHD 12bit noise" : 20 runs - average runtime: 100.77 ms
+         Case "FullHD 12bit noise" : 20 runs - average throughput: 153.86 MB/s
 ```
+`WasmDecoder` is roughly 1.5x - 2.3x faster than `DefaultDecoder`.
+TODO...
 
-Note that encoding is much more expensive than decoding and prolly should be called within a webworker or child process.
 
 ### Status
 Currently beta, still more tests to come.
+
 
 ### References
 
