@@ -258,8 +258,8 @@ void decode(int length) {
             } else if (ps.p_length == 5) {
               if (ps.params[1] < 3
                 && ps.params[1] == 1 ? ps.params[2] <= 360 : ps.params[2] <= 100
-                && ps.params[2] <= 100
-                && ps.params[3] <= 100) {
+                && ps.params[3] <= 100
+                && ps.params[4] <= 100) {
                 switch (ps.params[1]) {
                   case 2:  // RGB
                     ps.color = ps.palette[ps.params[0] % ps.palette_length] = normalize_rgb(

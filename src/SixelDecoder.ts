@@ -411,8 +411,8 @@ export class SixelDecoder {
               // cancel whole command if not passing all
               if (params.params[1] < 3
                   && params.params[1] === 1 ? params.params[2] <= 360 :  params.params[2] <= 100
-                  && params.params[2] <= 100
-                  && params.params[3] <= 100)
+                  && params.params[3] <= 100
+                  && params.params[4] <= 100)
               {
                 switch (params.params[1]) {
                   case 2:
