@@ -6,6 +6,18 @@
 import * as assert from 'assert';
 import { fromRGBA8888, toRGBA8888, BIG_ENDIAN, red, green, blue, alpha, normalizeHLS, normalizeRGB, nearestColorIndex } from './Colors';
 import * as colors from './Colors';
+import { RGBA8888 } from './Types';
+
+function almostEqualColor(a: RGBA8888, b: RGBA8888, distance: number = 0) {
+  try {
+    assert.strictEqual(Math.abs(red(a) - red(b)) <= distance, true);
+    assert.strictEqual(Math.abs(green(a) - green(b)) <= distance, true);
+    assert.strictEqual(Math.abs(blue(a) - blue(b)) <= distance, true);
+    assert.strictEqual(Math.abs(alpha(a) - alpha(b)) <= distance, true);
+  } catch (e) {
+    throw new Error(`mismatch in colors: [${fromRGBA8888(a)}] : [${fromRGBA8888(b)}]`);
+  }
+}
 
 describe('Colors', () => {
   describe('toRGBA888', () => {
@@ -76,26 +88,26 @@ describe('Colors', () => {
   it('RGB/HLS VT340 normalization', () => {
     // values taken from https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
     assert.strictEqual(normalizeHLS(0, 0, 0), normalizeRGB(0, 0, 0));
-    assert.strictEqual(normalizeHLS(0, 50, 60), normalizeRGB(20, 20, 80));
-    assert.strictEqual(normalizeHLS(120, 46, 72), normalizeRGB(80, 13, 13) - 2);              // mismatch R: 2
-    assert.strictEqual(normalizeHLS(240, 50, 60), normalizeRGB(20, 80, 20));
-    assert.strictEqual(normalizeHLS(60, 50, 60), normalizeRGB(80, 20, 80));
-    assert.strictEqual(normalizeHLS(300, 50, 60), normalizeRGB(20, 80, 80));
-    assert.strictEqual(normalizeHLS(180, 50, 60), normalizeRGB(80, 80, 20));
-    assert.strictEqual(normalizeHLS(0, 53, 0), normalizeRGB(53, 53, 53));
-    assert.strictEqual(normalizeHLS(0, 26, 0), normalizeRGB(26, 26, 26));
-    assert.strictEqual(normalizeHLS(0, 46, 29), normalizeRGB(33, 33, 60) - 0x020101);         // mismatch B: 2 G: 1 R: 1
-    assert.strictEqual(normalizeHLS(120, 43, 39), normalizeRGB(60, 26, 26) + 0x010100 - 0x1); // mismatch B: -1 G: -1 R: 1
-    assert.strictEqual(normalizeHLS(240, 46, 29), normalizeRGB(33, 60, 33) - 0x010201);       // mismatch B: 1 G: 2 R: 1
-    assert.strictEqual(normalizeHLS(0, 80, 0), normalizeRGB(80, 80, 80));
+    almostEqualColor(normalizeHLS(0, 50, 60), normalizeRGB(20, 20, 80), 0);
+    almostEqualColor(normalizeHLS(120, 46, 72), normalizeRGB(80, 13, 13), 2);
+    almostEqualColor(normalizeHLS(240, 50, 60), normalizeRGB(20, 80, 20), 0);
+    almostEqualColor(normalizeHLS(60, 50, 60), normalizeRGB(80, 20, 80), 0);
+    almostEqualColor(normalizeHLS(300, 50, 60), normalizeRGB(20, 80, 80), 0);
+    almostEqualColor(normalizeHLS(180, 50, 60), normalizeRGB(80, 80, 20), 0);
+    almostEqualColor(normalizeHLS(0, 53, 0), normalizeRGB(53, 53, 53), 0);
+    almostEqualColor(normalizeHLS(0, 26, 0), normalizeRGB(26, 26, 26), 0);
+    almostEqualColor(normalizeHLS(0, 46, 29), normalizeRGB(33, 33, 60), 2);
+    almostEqualColor(normalizeHLS(120, 43, 39), normalizeRGB(60, 26, 26), 1);
+    almostEqualColor(normalizeHLS(240, 46, 29), normalizeRGB(33, 60, 33), 2);
+    almostEqualColor(normalizeHLS(0, 80, 0), normalizeRGB(80, 80, 80), 0);
 
     // basic HLS tests
-    assert.strictEqual(normalizeHLS(0, 50, 100), toRGBA8888(0, 0, 255));
-    assert.strictEqual(normalizeHLS(120, 50, 100), toRGBA8888(255, 0, 0));
-    assert.strictEqual(normalizeHLS(240, 50, 100), toRGBA8888(0, 255, 0));
-    assert.strictEqual(normalizeHLS(180, 50, 100), toRGBA8888(255, 255, 0));
-    assert.strictEqual(normalizeHLS(300, 50, 100), toRGBA8888(0, 255, 255));
-    assert.strictEqual(normalizeHLS(60, 50, 100), toRGBA8888(255, 0, 255));
+    almostEqualColor(normalizeHLS(0, 50, 100), toRGBA8888(0, 0, 255), 0);
+    almostEqualColor(normalizeHLS(120, 50, 100), toRGBA8888(255, 0, 0), 0);
+    almostEqualColor(normalizeHLS(240, 50, 100), toRGBA8888(0, 255, 0), 0);
+    almostEqualColor(normalizeHLS(180, 50, 100), toRGBA8888(255, 255, 0), 0);
+    almostEqualColor(normalizeHLS(300, 50, 100), toRGBA8888(0, 255, 255), 0);
+    almostEqualColor(normalizeHLS(60, 50, 100), toRGBA8888(255, 0, 255), 0);
   });
   it('nearestColorIndex (ED)', () => {
     const p: [number, number, number][] = [[0, 0, 0], [50, 50, 0], [100, 50, 50], [100, 100, 100], [150, 100, 50]];
@@ -105,15 +117,17 @@ describe('Colors', () => {
   });
   it('BE fake tests', () => {
     const endianess = BIG_ENDIAN;
-    (colors as any).BIG_ENDIAN = true;
-    colors.red(0x11223344);
-    assert.strictEqual(colors.red(0x11223344), 0x11);
-    assert.strictEqual(colors.green(0x11223344), 0x22);
-    assert.strictEqual(colors.blue(0x11223344), 0x33);
-    assert.strictEqual(colors.alpha(0x11223344), 0x44);
-    assert.deepStrictEqual(colors.fromRGBA8888(0x11223344), [0x11, 0x22, 0x33, 0x44]);
-    assert.strictEqual(colors.toRGBA8888(0x11, 0x22, 0x33, 0x44), 0x11223344);
-    assert.strictEqual(colors.normalizeHLS(0, 50, 60), colors.normalizeRGB(20, 20, 80));
-    (colors as any).BIG_ENDIAN = endianess;
+    if (!endianess) {
+      (colors as any).BIG_ENDIAN = true;
+      colors.red(0x11223344);
+      assert.strictEqual(colors.red(0x11223344), 0x11);
+      assert.strictEqual(colors.green(0x11223344), 0x22);
+      assert.strictEqual(colors.blue(0x11223344), 0x33);
+      assert.strictEqual(colors.alpha(0x11223344), 0x44);
+      assert.deepStrictEqual(colors.fromRGBA8888(0x11223344), [0x11, 0x22, 0x33, 0x44]);
+      assert.strictEqual(colors.toRGBA8888(0x11, 0x22, 0x33, 0x44), 0x11223344);
+      assert.strictEqual(colors.normalizeHLS(0, 50, 60), colors.normalizeRGB(20, 20, 80));  // messing up other tests?
+      (colors as any).BIG_ENDIAN = endianess;
+    }
   });
 });

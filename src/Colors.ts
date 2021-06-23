@@ -32,7 +32,7 @@ export function alpha(n: RGBA8888): number {
  */
 export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RGBA8888 {
   return (BIG_ENDIAN)
-    ? ((r & 0xFF) << 24 | (g & 0xFF) << 16 | (b % 0xFF) << 8 | (a & 0xFF)) >>> 0    // RGBA32
+    ? ((r & 0xFF) << 24 | (g & 0xFF) << 16 | (b & 0xFF) << 8 | (a & 0xFF)) >>> 0    // RGBA32
     : ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
 }
 
@@ -77,35 +77,37 @@ export function nearestColorIndex(color: RGBA8888, palette: RGBColor[]): number 
 
 
 // color conversions
-function hue2rgb(p: number, q: number, t: number): number {
-  if (t < 0) t += 1;
-  if (t > 1) t -= 1;
-  if (t < 1 / 6) return p + (q - p) * 6 * t;
-  if (t < 1 / 2) return q;
-  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-  return p;
+// HLS taken from: http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl
+
+function clamp(low: number, high: number, value: number): number {
+  return Math.max(low, Math.min(value, high));
 }
 
-function hlsToRgb(h: number, l: number, s: number): RGBA8888 {
-  let r;
-  let g;
-  let b;
+function h2c(t1: number, t2: number, c: number): number {
+  if (c < 0) c += 1;
+  if (c > 1) c -= 1;
+  return c * 6 < 1
+    ? t2 + (t1 - t2) * 6 * c
+    : c * 2 < 1
+      ? t1
+      : c * 3 < 2
+        ? t2 + (t1 - t2) * (4 - c * 6)
+        : t2;
+}
 
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
+function HLStoRGB(h: number, l: number, s: number): RGBA8888 {
+  if (!s) {
+    const v = Math.round(l * 255);
+    return toRGBA8888(v, v, v);
   }
-
-  return (BIG_ENDIAN)
-    ? (Math.round(r * 255) << 24 | Math.round(g * 255) << 16 | Math.round(b * 255) << 8 | 0xFF) >>> 0   // RGBA32
-    : (0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255)) >>> 0;  // ABGR32
+  const t1 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const t2 = 2 * l - t1;
+  return toRGBA8888(
+    clamp(0, 255, Math.round(h2c(t1, t2, h + 1 / 3) * 255)),
+    clamp(0, 255, Math.round(h2c(t1, t2, h) * 255)),
+    clamp(0, 255, Math.round(h2c(t1, t2, h - 1 / 3) * 255))
+  );
 }
-
 
 /**
  * Normalize SIXEL RGB values (percent based, 0-100) to RGBA8888.
@@ -121,8 +123,8 @@ export function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
  * Normalize SIXEL HLS values to RGBA8888. Applies hue correction of +240°.
  */
 export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
-  // Note: hue value is turned by 240° in VT340
-  return hlsToRgb((h + 240) / 360 - 1, l / 100, s / 100);
+  // Note: hue value is turned by 240° in VT340, all values given as fractions
+  return HLStoRGB((h + 240 % 360) / 360, l / 100, s / 100);
 }
 
 
