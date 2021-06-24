@@ -149,6 +149,36 @@ inline int normalize_rgb(int r, int g, int b) {
   return 0xFF000000 | ((b * 255 + 99) / 100) << 16 | ((g * 255 + 99) / 100) << 8 | ((r * 255 + 99) / 100);
 }
 
+// hue to channel value helper.
+inline float h2c(float t1, float t2, float c) {
+  if (c < 0) c += 1;
+  else if (c > 1) c -= 1;
+  return c * 6 < 1
+    ? t2 + (t1 - t2) * 6 * c
+    : c * 2 < 1
+      ? t1
+      : c * 3 < 2
+        ? t2 + (t1 - t2) * (4 - c * 6)
+        : t2;
+}
+
+// Normalize SIXEL HLS to RGBA8888.
+// Incoming values are integer in: H - 0..360 (hue turned by 240°), L - 0..100, S - 0..100.
+inline int normalize_hls(int hi, int li, int si) {
+  if (!si) {
+    return 0xFF000000 | ((li * 255 + 99) / 100) << 16 | ((li * 255 + 99) / 100) << 8 | ((li * 255 + 99) / 100);
+  }
+  float h = ((float) (hi + 240 % 360)) / 360;
+  float l = ((float) li) / 100;
+  float s = ((float) si) / 100;
+  float t1 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  float t2 = l * 2 - t1;
+  unsigned char r = 255 * h2c(t1, t2, h + (1.0f / 3));
+  unsigned char g = 255 * h2c(t1, t2, h);
+  unsigned char b = 255 * h2c(t1, t2, h - (1.0f / 3));
+  return 0xFF000000 | b << 16 | g << 8 | r;
+}
+
 
 /**
  * @brief Initialize a new SIXEL image.
@@ -159,7 +189,7 @@ inline int normalize_rgb(int r, int g, int b) {
  * 
  * @param width       Pixel width of the image to be decoded.
  * @param height      Pixel height of the image to be decoded.
- * @param fill_color  Fillcolor in RGBA8888 to initialize canvas with (LE only currently).
+ * @param fill_color  Fillcolor in RGBA8888 to initialize canvas with.
  */
 void init(int width, int height, int fill_color, int palette_length) {
   ps.not_aborted = 1;
@@ -266,8 +296,7 @@ void decode(int length) {
                       ps.params[2], ps.params[3], ps.params[4]);
                     break;
                   case 1:  // HLS
-                    // FIXME: port HLS calc
-                    ps.color = ps.palette[ps.params[0] % ps.palette_length] = normalize_rgb(
+                    ps.color = ps.palette[ps.params[0] % ps.palette_length] = normalize_hls(
                       ps.params[2], ps.params[3], ps.params[4]);
                     break;
                   case 0:  // illegal, only apply color switch
