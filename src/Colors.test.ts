@@ -4,8 +4,7 @@
  */
 
 import * as assert from 'assert';
-import { fromRGBA8888, toRGBA8888, BIG_ENDIAN, red, green, blue, alpha, normalizeHLS, normalizeRGB, nearestColorIndex } from './Colors';
-import * as colors from './Colors';
+import { fromRGBA8888, toRGBA8888, red, green, blue, alpha, normalizeHLS, normalizeRGB, nearestColorIndex } from './Colors';
 import { RGBA8888 } from './Types';
 
 function almostEqualColor(a: RGBA8888, b: RGBA8888, distance: number = 0) {
@@ -23,10 +22,10 @@ describe('Colors', () => {
   describe('toRGBA888', () => {
     it('conversions', () => {
       assert.strictEqual(toRGBA8888(0, 0, 0, 0), 0);
-      assert.strictEqual(toRGBA8888(0, 0, 0, 255), BIG_ENDIAN ? 0x000000FF : 0xFF000000);
-      assert.strictEqual(toRGBA8888(0, 0, 255, 0), BIG_ENDIAN ? 0x0000FF00 : 0x00FF0000);
-      assert.strictEqual(toRGBA8888(0, 255, 0, 0), BIG_ENDIAN ? 0x00FF0000 : 0x0000FF00);
-      assert.strictEqual(toRGBA8888(255, 0, 0, 0), BIG_ENDIAN ? 0xFF000000 : 0x000000FF);
+      assert.strictEqual(toRGBA8888(0, 0, 0, 255), 0xFF000000);
+      assert.strictEqual(toRGBA8888(0, 0, 255, 0), 0x00FF0000);
+      assert.strictEqual(toRGBA8888(0, 255, 0, 0), 0x0000FF00);
+      assert.strictEqual(toRGBA8888(255, 0, 0, 0), 0x000000FF);
     });
     it('alpha defaults to 255', () => {
       assert.strictEqual(toRGBA8888(0, 0, 0), toRGBA8888(0, 0, 0, 255));
@@ -51,24 +50,24 @@ describe('Colors', () => {
       assert.strictEqual(toRGBA8888(-8, -50, -100, -127), toRGBA8888(-8 >>> 0, -50 >>> 0, -100 >>> 0, -127 >>> 0));
     });
     it('strip channel values to 8 bit (not clamping)', () => {
-      assert.strictEqual(toRGBA8888(0x1234, 0x5678, 0xabcd, 0xef11), BIG_ENDIAN ? 0x3478cd11 : 0x11cd7834);
+      assert.strictEqual(toRGBA8888(0x1234, 0x5678, 0xabcd, 0xef11), 0x11cd7834);
     });
   });
   describe('fromRGBA8888', () => {
     it('conversions', () => {
       assert.deepStrictEqual(fromRGBA8888(0), [0, 0, 0, 0]);
-      assert.deepStrictEqual(fromRGBA8888(0x000000FF), BIG_ENDIAN ? [0, 0, 0, 255] : [255, 0, 0, 0]);
-      assert.deepStrictEqual(fromRGBA8888(0x0000FF00), BIG_ENDIAN ? [0, 0, 255, 0] : [0, 255, 0, 0]);
-      assert.deepStrictEqual(fromRGBA8888(0x00FF0000), BIG_ENDIAN ? [0, 255, 0, 0] : [0, 0, 255, 0]);
-      assert.deepStrictEqual(fromRGBA8888(0xFF000000), BIG_ENDIAN ? [255, 0, 0, 0] : [0, 0, 0, 255]);
+      assert.deepStrictEqual(fromRGBA8888(0x000000FF), [255, 0, 0, 0]);
+      assert.deepStrictEqual(fromRGBA8888(0x0000FF00), [0, 255, 0, 0]);
+      assert.deepStrictEqual(fromRGBA8888(0x00FF0000), [0, 0, 255, 0]);
+      assert.deepStrictEqual(fromRGBA8888(0xFF000000), [0, 0, 0, 255]);
     });
     it('should only create unsigned channel values', () => {
       assert.deepStrictEqual(fromRGBA8888(-1), [255, 255, 255, 255]);
       // 2 complement: -0xedcba988 ==> 0x12345678 (newDigit = 15 - digit; result + 1)
-      assert.deepStrictEqual(fromRGBA8888(-0xedcba988), BIG_ENDIAN ? [0x12, 0x34, 0x56, 0x78] : [0x78, 0x56, 0x34, 0x12]);
+      assert.deepStrictEqual(fromRGBA8888(-0xedcba988), [0x78, 0x56, 0x34, 0x12]);
     });
     it('strip values to 32bit', () => {
-      assert.deepStrictEqual(fromRGBA8888(0x1234567890), BIG_ENDIAN ? [0x12, 0x34, 0x56, 0x78] : [0x90, 0x78, 0x56, 0x34]);
+      assert.deepStrictEqual(fromRGBA8888(0x1234567890), [0x90, 0x78, 0x56, 0x34]);
     });
   });
   describe('channels', () => {
@@ -114,20 +113,5 @@ describe('Colors', () => {
     assert.strictEqual(nearestColorIndex(toRGBA8888(1, 2, 3), p), 0);
     assert.strictEqual(nearestColorIndex(toRGBA8888(100, 100, 100), p), 3);
     assert.strictEqual(nearestColorIndex(toRGBA8888(170, 100, 50), p), 4);
-  });
-  it('BE fake tests', () => {
-    const endianess = BIG_ENDIAN;
-    if (!endianess) {
-      (colors as any).BIG_ENDIAN = true;
-      colors.red(0x11223344);
-      assert.strictEqual(colors.red(0x11223344), 0x11);
-      assert.strictEqual(colors.green(0x11223344), 0x22);
-      assert.strictEqual(colors.blue(0x11223344), 0x33);
-      assert.strictEqual(colors.alpha(0x11223344), 0x44);
-      assert.deepStrictEqual(colors.fromRGBA8888(0x11223344), [0x11, 0x22, 0x33, 0x44]);
-      assert.strictEqual(colors.toRGBA8888(0x11, 0x22, 0x33, 0x44), 0x11223344);
-      assert.strictEqual(colors.normalizeHLS(0, 50, 60), colors.normalizeRGB(20, 20, 80));  // messing up other tests?
-      (colors as any).BIG_ENDIAN = endianess;
-    }
   });
 });

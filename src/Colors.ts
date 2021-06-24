@@ -8,22 +8,25 @@ import { RGBA8888, RGBColor } from './Types';
 
 // system endianess
 export const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
+if (BIG_ENDIAN) {
+  console.warn('BE platform detected. This version of node-sixel works only on LE properly.');
+}
 
 // channel values
 export function red(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n >>> 24 : n) & 0xFF;
+  return n & 0xFF;
 }
 
 export function green(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n >>> 16 : n >>> 8) & 0xFF;
+  return (n >>> 8) & 0xFF;
 }
 
 export function blue(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n >>> 8 : n >>> 16) & 0xFF;
+  return (n >>> 16) & 0xFF;
 }
 
 export function alpha(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n : n >>> 24) & 0xFF;
+  return (n >>> 24) & 0xFF;
 }
 
 
@@ -31,9 +34,7 @@ export function alpha(n: RGBA8888): number {
  * Convert RGB channels to native color RGBA8888.
  */
 export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RGBA8888 {
-  return (BIG_ENDIAN)
-    ? ((r & 0xFF) << 24 | (g & 0xFF) << 16 | (b & 0xFF) << 8 | (a & 0xFF)) >>> 0    // RGBA32
-    : ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
+  return ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
 }
 
 
@@ -41,9 +42,7 @@ export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RG
  * Convert native color to [r, g, b, a].
  */
 export function fromRGBA8888(color: RGBA8888): [number, number, number, number] {
-  return (BIG_ENDIAN)
-    ? [color >>> 24, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]
-    : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >>> 24];
+  return [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >>> 24];
 }
 
 
@@ -113,9 +112,7 @@ function HLStoRGB(h: number, l: number, s: number): RGBA8888 {
  * Normalize SIXEL RGB values (percent based, 0-100) to RGBA8888.
  */
 export function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
-  return (BIG_ENDIAN)
-    ? (Math.round(r / 100 * 255) << 24 | Math.round(g / 100 * 255) << 16 | Math.round(b / 100 * 255) << 8 | 0xFF) >>> 0   // RGBA32
-    : (0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255)) >>> 0;  // ABGR32
+  return (0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255)) >>> 0;  // ABGR32
 }
 
 
