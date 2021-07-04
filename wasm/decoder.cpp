@@ -47,19 +47,11 @@ struct ParserState {
 static struct ParserState ps;
 
 
-// IO memory
-//static char CHUNK[CHUNK_SIZE];    // input data chunks
-//static int CANVAS[CANVAS_SIZE];   // output pixel canvas in RGBA32
-
-
 // exported functions
 extern "C" {
   void* get_chunk_address() { return &ps.chunk[0]; }
-  void* get_canvas_address() { return &ps.canvas[0]; }
+  void* get_canvas_address() { return &ps.canvas[8]; }
   void* get_palette_address() { return &ps.palette[0]; }
-  int get_chunk_limit() { return CHUNK_SIZE; }
-  int get_canvas_limit() { return CANVAS_SIZE; }
-  int get_palette_limit() { return PALETTE_SIZE; }
 
   void init(int width, int height, int fill_color, int palette_length);
   void decode(int length);
@@ -69,17 +61,14 @@ extern "C" {
  * Some inline helpers.
  */
 
-// Put a single a single sixel at current cursor position.
+// Put single sixel at current cursor position.
 // Note: does not alter cursor position.
 inline void put_single(int code, int color) {
   if (code && ps.cursor < ps.width && ps.y_offset < ps.height) {
     int p = ps.cursor + ps.offset;
-    if (code & 1) ps.canvas[p] = color;
-    if (code & 2) ps.canvas[p + ps.jump_offsets[1]] = color;
-    if (code & 4) ps.canvas[p + ps.jump_offsets[2]] = color;
-    if (code & 8) ps.canvas[p + ps.jump_offsets[3]] = color;
-    if (code & 16) ps.canvas[p + ps.jump_offsets[4]] = color;
-    if (code & 32) ps.canvas[p + ps.jump_offsets[5]] = color;
+    for (int i = 0; i < 6; ++i) {
+      ps.canvas[((code >> i) & 1) * (p + ps.jump_offsets[i])] = color;
+    }
   }
 }
 
@@ -92,7 +81,7 @@ inline void put(int code, int color, int n) {
     }
     int p = ps.cursor + ps.offset;
     for (int i = 0; i < 6; ++i) {
-      if (code & (1 << i)) {
+      if ((code >> i) & 1) {
         int pp = p + ps.jump_offsets[i];
         for (int r = 0; r < n; ++r) {
           ps.canvas[pp + r] = color;
@@ -116,7 +105,7 @@ inline void jump(int code) {
       break;
     case 45:
       ps.y_offset += 6;
-      ps.offset = ps.y_offset * ps.width;
+      ps.offset = ps.y_offset * ps.width + 8;
       ps.cursor = 0;
       break;
     case 34:
@@ -192,41 +181,45 @@ inline int normalize_hls(int hi, int li, int si) {
  * @param fill_color  Fillcolor in RGBA8888 to initialize canvas with.
  */
 void init(int width, int height, int fill_color, int palette_length) {
-  ps.not_aborted = 1;
-  ps.state = ST_DATA;
-  ps.color = 0;
-  ps.cursor = 0;
-  ps.y_offset = 0;
-  ps.offset = 0;
-  ps.palette_length = (0 < palette_length && palette_length < PALETTE_SIZE) ? palette_length : PALETTE_SIZE;
-  params_reset();
-
   // basic overflow check
   // Note: The height adjustment here is needed to avoid a potential overflow in the last sixel line.
   // By adjusting here to multiples of 6 we reduce the usable canvas a bit, but can avoid nasty special
   // case branching in put.
-  if (width == 0 || width > 0xFFFF || height == 0 || height > 0xFFFF || width * (height + 5) / 6 > CANVAS_SIZE) {
+  // +8 - canvas[0..7] as dummy pixels, image starts at canvas[8]
+  int length = ((height + 5) / 6 * 6) * width + 8;
+  if (0 < width && width < 0xFFFF && 0 < height && height < 0xFFFF && length < CANVAS_SIZE) {
+    ps.not_aborted = 1;
+    ps.width = width;
+    ps.height = height;
+    ps.state = ST_DATA;
+    ps.color = 0;
+    ps.cursor = 0;
+    ps.y_offset = 0;
+    ps.offset = 8;
+    ps.palette_length = (0 < palette_length && palette_length < PALETTE_SIZE) ? palette_length : PALETTE_SIZE;
+    params_reset();
+
+    // clear canvas with fill_color
+    // for (int i = 1; i < length; ++i) {
+    //   ps.canvas[i] = fill_color;
+    // }
+    // faster variant with 64 bit
+    int length64 = (length + 1) / 2;
+    long long color = ((unsigned long long) fill_color) << 32 | (unsigned int) fill_color;
+    long long *p = (long long *) &ps.canvas[0];
+    for (int i = 1; i < length64; ++i) {
+      p[i] = color;
+    }
+
+    // calc sixel pixel line jump offsets
+    for (int i = 0, v = 0; i < 6; ++i, v += ps.width) {
+      ps.jump_offsets[i] = v;
+    }
+
+  } else {
     ps.not_aborted = 0;
     ps.width = 0;
     ps.height = 0;
-    return;
-  }
-
-  ps.width = width;
-  ps.height = height;
-
-  // clear canvas with fill_color
-  int p = 0;
-  for (int y = 0; y < ps.height; ++y) {
-    for (int x = 0; x < ps.width; ++x) {
-      ps.canvas[p + x] = fill_color;
-    }
-    p = p + ps.width;
-  }
-
-  // calc sixel pixel line jump offsets
-  for (int i = 0, v = 0; i < 6; ++i, v += ps.width) {
-    ps.jump_offsets[i] = v;
   }
 }
 
@@ -249,6 +242,8 @@ void decode(int length) {
           if (code > 47 && code < 58) {
             params_add_digit(code - 48);
           } else if (code > 62 && code != 127) {
+            // FIXME: re-introduce compression stacking !255!255 == !510
+            // STD 070: !0 == !1
             put(code - 63, ps.color, ps.params[0]);
             ps.cursor += ps.params[0];
             params_reset();
@@ -268,7 +263,7 @@ void decode(int length) {
             case 45:
               params_reset();
               ps.y_offset += 6;
-              ps.offset = ps.y_offset * ps.width;
+              ps.offset = ps.y_offset * ps.width + 8;
               ps.cursor = 0;
               break;
             case 34:
@@ -292,11 +287,11 @@ void decode(int length) {
                 && ps.params[4] <= 100) {
                 switch (ps.params[1]) {
                   case 2:  // RGB
-                    ps.color = ps.palette[ps.params[0] % ps.palette_length] = normalize_rgb(
+                    ps.palette[ps.params[0] % ps.palette_length] = ps.color = normalize_rgb(
                       ps.params[2], ps.params[3], ps.params[4]);
                     break;
                   case 1:  // HLS
-                    ps.color = ps.palette[ps.params[0] % ps.palette_length] = normalize_hls(
+                    ps.palette[ps.params[0] % ps.palette_length] = ps.color = normalize_hls(
                       ps.params[2], ps.params[3], ps.params[4]);
                     break;
                   case 0:  // illegal, only apply color switch
@@ -325,6 +320,90 @@ void decode(int length) {
               ps.state = ST_DATA;
             } else jump(code);
           }
+          break;
+      }
+    }
+  }
+}
+
+/**
+ * Decode approach with cleaner state handling.
+ * Not quite as fast as above, but more condensed still missing several transistions.
+ */
+
+inline void maybe_color() {
+  if (ps.state == ST_COLOR) {
+    if (ps.p_length == 1) {
+      ps.color = ps.palette[ps.params[0] % ps.palette_length];
+    } else if (ps.p_length == 5) {
+      if (ps.params[1] < 3
+        && ps.params[1] == 1 ? ps.params[2] <= 360 : ps.params[2] <= 100
+        && ps.params[3] <= 100
+        && ps.params[4] <= 100) {
+        switch (ps.params[1]) {
+          case 2:  // RGB
+            ps.palette[ps.params[0] % ps.palette_length] = ps.color = normalize_rgb(
+              ps.params[2], ps.params[3], ps.params[4]);
+            break;
+          case 1:  // HLS
+            ps.palette[ps.params[0] % ps.palette_length] = ps.color = normalize_hls(
+              ps.params[2], ps.params[3], ps.params[4]);
+            break;
+          case 0:  // illegal, only apply color switch
+            ps.color = ps.palette[ps.params[0] % ps.palette_length];
+        }
+      }
+    }
+  }
+}
+
+void decode_(int length) {
+  if (ps.not_aborted && ps.y_offset < ps.height) {
+    for (int i = 0; i < length; ++i) {
+      int code = ps.chunk[i] & 0x7F;
+      if (62 < code && code < 127) {
+        switch (ps.state) {
+          case ST_COMPRESSION:
+            put(code - 63, ps.color, ps.params[0]);
+            ps.cursor += ps.params[0];
+            ps.state = ST_DATA;
+            break;
+          case ST_COLOR:
+            maybe_color();
+            ps.state = ST_DATA;
+          default:
+            put_single(code - 63, ps.color);
+            ps.cursor++;
+        }
+      } else if (47 < code && code < 58) {
+        params_add_digit(code - 48);
+      } else
+      switch (code) {
+        case 59:
+          params_add_param();
+          break;
+        case 33:
+          maybe_color();
+          params_reset();
+          ps.state = ST_COMPRESSION;
+          break;
+        case 35:
+          maybe_color();
+          params_reset();
+          ps.state = ST_COLOR;
+          break;
+        case 36:
+          ps.cursor = 0;
+          break;
+        case 45:
+          ps.y_offset += 6;
+          ps.offset = ps.y_offset * ps.width + 8;
+          ps.cursor = 0;
+          break;
+        case 34:
+          maybe_color();
+          params_reset();
+          ps.state = ST_ATTR;
           break;
       }
     }

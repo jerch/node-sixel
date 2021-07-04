@@ -64,10 +64,7 @@ emcc -O3 \
   "_decode",
   "_get_chunk_address",
   "_get_canvas_address",
-  "_get_palette_address",
-  "_get_chunk_limit",
-  "_get_canvas_limit",
-  "_get_palette_limit"
+  "_get_palette_address"
 ]' \
 --no-entry decoder.cpp -o sixel.wasm
 
