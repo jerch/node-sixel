@@ -6,7 +6,8 @@
     "outDir": "lib",
     "sourceMap": true,
     "declaration": true,
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "resolveJsonModule": true
   },
   "exclude": [
     "node_modules",

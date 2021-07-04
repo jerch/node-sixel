@@ -6,3 +6,5 @@
 /.nyc_output
 /benchmark
 /.vscode
+/wasm/sixel.wasm
+/src/wasm.json
