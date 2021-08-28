@@ -258,8 +258,11 @@ export const PALETTE_ANSI_256 = (() => {
 })();
 
 /**
- * Black by default.
+ * Background: Black by default.
+ * Foreground: White by default.
  *
- * Used whenever a background or fill color is needed and not explicitly set.
+ * Background color is used whenever a fill color is needed and not explicitly set.
+ * Foreground color is used as default initial sixel color.
  */
 export const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0, 0, 0, 255);
+export const DEFAULT_FOREGROUND: RGBA8888 = toRGBA8888(255, 255, 255, 255);

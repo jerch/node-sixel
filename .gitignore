@@ -6,5 +6,7 @@
 /.nyc_output
 /benchmark
 /.vscode
-/wasm/sixel.wasm
-/src/wasm.json
+/wasm/decoder.wasm
+/wasm/settings.json
+/src/wasm.ts
+/emsdk

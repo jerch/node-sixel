@@ -80,7 +80,7 @@ describe('Colors', () => {
     it('blue', () => {
       assert.strictEqual(blue(toRGBA8888(0x12, 0x34, 0x56, 0x78)), 0x56);
     });
-    it('green', () => {
+    it('alpha', () => {
       assert.strictEqual(alpha(toRGBA8888(0x12, 0x34, 0x56, 0x78)), 0x78);
     });
   });

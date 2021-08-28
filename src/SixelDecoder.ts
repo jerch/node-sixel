@@ -249,7 +249,7 @@ export class SixelDecoder {
   private _params = new Params();
   private _currentColor = this.palette[0];
   private _currentBand: SixelBand;
-  private _buffer: Uint8Array;
+  private _buffer: Uint8Array | undefined;
 
   /**
    * Create a new decoder instance.
@@ -550,6 +550,8 @@ export class SixelDecoder {
 
   public get data32(): Uint32Array {
     // FIXME: to be implemented
-    return new Uint32Array();
+    const d32 = new Uint32Array(this.width * this.height);
+    this.toPixelData(new Uint8ClampedArray(d32.buffer), this.width, this.height);
+    return d32;
   }
 }

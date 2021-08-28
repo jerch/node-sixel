@@ -16,3 +16,5 @@ src/*.benchmark.*
 src/*.test.*
 img2sixel.js
 .vscode
+lib-esm
+emsdk

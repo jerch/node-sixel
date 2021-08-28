@@ -91,7 +91,7 @@ function processBand(
       // skip expensive color to palette matching if we have same color as before
       if (color !== oldColor) {
         oldColor = color;
-        idx = alpha(color) ? colorMap.get(color) : 0;
+        idx = alpha(color) ? colorMap.get(color) || 0 : 0;
         if (idx === undefined) {
           idx = nearestColorIndex(color, paletteRGB) + 1;
           colorMap.set(color, idx);

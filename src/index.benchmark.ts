@@ -3,12 +3,12 @@
  * @license MIT
  */
 
-import { RuntimeCase, perfContext, before, beforeEach, ThroughputRuntimeCase } from 'xterm-benchmark';
+import { RuntimeCase, perfContext, before, ThroughputRuntimeCase } from 'xterm-benchmark';
 import { toRGBA8888, SixelDecoder, introducer, FINALIZER, sixelEncode } from './index';
 import * as fs from 'fs';
 import { RGBA8888 } from './Types';
-import { DimensionDecoder } from './DimensionDecoder';
-import { WasmDecoder } from './WasmDecoder';
+import { Decoder } from './Decoder';
+import { ICaseResult, IPerfCase } from 'xterm-benchmark/lib/interfaces';
 
 
 // test data: 9-bit palette in 10x10 tiles (512 colors: 8*8*8) - 640x80 -> 6 rows => 640x480
@@ -106,13 +106,13 @@ perfContext('testimage', () => {
   });
 
   perfContext('decode (WasmDecoder)', () => {
-    const wasmDec = new WasmDecoder();
+    const wasmDec = new Decoder();
     new RuntimeCase('decode', () => {
-      wasmDec.init(640, 480);
+      wasmDec.init();
       wasmDec.decode(SIXELBYTES);
     }, {repeat: 20}).showAverageRuntime();
     new RuntimeCase('decodeString', () => {
-      wasmDec.init(640, 480);
+      wasmDec.init();
       wasmDec.decodeString(SIXELSTRING);
     }, {repeat: 20}).showAverageRuntime();
   });
@@ -129,6 +129,9 @@ perfContext('testimage', () => {
 const TEST1 = fs.readFileSync(__dirname + '/../testfiles/test1_clean.sixel');
 const TEST2 = fs.readFileSync(__dirname + '/../testfiles/test2_clean.sixel');
 const SAMPSA = fs.readFileSync(__dirname + '/../testfiles/sampsa_reencoded_clean.six');
+
+const FHD1 = fs.readFileSync(__dirname + '/../testfiles/fhd1_clean.six');
+const FHD2 = fs.readFileSync(__dirname + '/../testfiles/fhd2_clean.six');
 
 // create 1920 x 1080 random noise in 12bit-RGB
 // const channelValues = Array.from(Array(16).keys()).map(v => v * 16);
@@ -171,38 +174,80 @@ perfContext('decode - testfiles (DefaultDecoder)', () => {
   }, {repeat: 20}).showAverageRuntime().showAverageThroughput();
 });
 
+
 perfContext('decode - testfiles (WasmDecoder)', () => {
-  let dimDec: DimensionDecoder;
-  let wasmDec: WasmDecoder;
+  let wasmDec: Decoder;
   before(() => {
-    dimDec = new DimensionDecoder();
-    wasmDec = new WasmDecoder();
-  });
-  beforeEach(() => {
-    dimDec.reset();
+    wasmDec = new Decoder();
   });
   new ThroughputRuntimeCase('test1_clean.sixel', () => {
-    const dim = dimDec.decode(TEST1);
-    wasmDec.init(dim.width, dim.height);
+    wasmDec.init();
     wasmDec.decode(TEST1);
-    return {payloadSize: TEST1.length};
-  }, {repeat: 20}).showAverageRuntime().showAverageThroughput();
+    return {payloadSize: TEST1.length, pixelSize: wasmDec.width * wasmDec.height};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
   new ThroughputRuntimeCase('test2_clean.sixel', () => {
-    const dim = dimDec.decode(TEST2);
-    wasmDec.init(dim.width, dim.height);
+    wasmDec.init();
     wasmDec.decode(TEST2);
-    return {payloadSize: TEST2.length};
-  }, {repeat: 20}).showAverageRuntime().showAverageThroughput();
+    return {payloadSize: TEST2.length, pixelSize: wasmDec.width * wasmDec.height};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
   new ThroughputRuntimeCase('sampsa_reencoded_clean.six', () => {
-    const dim = dimDec.decode(SAMPSA);
-    wasmDec.init(dim.width, dim.height);
+    wasmDec.init();
     wasmDec.decode(SAMPSA);
-    return {payloadSize: SAMPSA.length};
-  }, {repeat: 20}).showAverageRuntime().showAverageThroughput();
+    return {payloadSize: SAMPSA.length, pixelSize: wasmDec.width * wasmDec.height};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
   new ThroughputRuntimeCase('FullHD 12bit noise', () => {
-    const dim = dimDec.decode(NOISE);
-    wasmDec.init(dim.width, dim.height);
+    wasmDec.init();
     wasmDec.decode(NOISE);
-    return {payloadSize: NOISE.length};
-  }, {repeat: 20}).showAverageRuntime().showAverageThroughput();
+    return {payloadSize: NOISE.length, pixelSize: wasmDec.width * wasmDec.height};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
+
+
+  new ThroughputRuntimeCase('640x480 9bit tiles', () => {
+    wasmDec.init();
+    wasmDec.decode(SIXELBYTES);
+    return {payloadSize: SIXELBYTES.length, pixelSize: 640 * 480};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
+
+  new ThroughputRuntimeCase('FullHD 1', () => {
+    wasmDec.init();
+    wasmDec.decode(FHD1);
+    return {payloadSize: FHD1.length, pixelSize: wasmDec.width * wasmDec.height};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
+  new ThroughputRuntimeCase('FullHD 2', () => {
+    wasmDec.init();
+    wasmDec.decode(FHD2);
+    return {payloadSize: FHD2.length, pixelSize: wasmDec.width * wasmDec.height};
+  }, {repeat: 20}).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
 });
+
+function sixelStats(results: ICaseResult[], perfCase: IPerfCase) {
+  //return;
+  let runtime = 0;
+    let pixels = 0;
+    for (const r of results) {
+      runtime += r.runtime[0] * 1000 + r.runtime[1] / 1000000;
+      pixels += r.returnValue.pixelSize;
+    }
+    //console.log(results[0].returnValue.payloadSize);
+    const fps = results.length / runtime * 1000;
+    const pps = pixels / runtime * 1000;
+    const pixelWrite = pixels * 4 / runtime * 1000;
+    console.log(
+      `${perfCase.getIndent()} --> image throughput`,
+      {
+        FPS: fps.toFixed(2),
+        PPS: fmtBig(pps),
+        pixelWrite: fmtBig(pixelWrite)+'B/s',
+      }
+    );
+}
+
+function fmtBig(v: number): string {
+  return v > 1000000000
+    ? (v / 1000000000).toFixed(2) + ' G'
+    : v > 1000000
+      ? (v / 1000000).toFixed(2) + ' M'
+      : v > 1000
+        ? (v / 1000).toFixed(2) + ' K'
+        : '' + v;
+}

@@ -73,19 +73,6 @@ Properties of `DefaultDecoder`:
     meaning as in the constructor, explicit setting it to 0 will leave non encoded pixels unaltered (pixels, that were not colored in the SIXEL data). This can be used for a transparency like effect (background/previous pixel value will remain). Returns the altered `target`.
 
 
-#### WasmDecoder
-
-The `WasmDecoder` is a level 2 only decoder written in C and compiled to WebAssembly. While it can decode image data much faster (see benchmarks below), it imposes several usage restrictions:
-
-- limited to 1536 x 1536 pixels and 4096 palette colors (compile time settings)
-- level 2 only, needs proper pixel dimensions (can be obtained from raster attributes with `DimensionDecoder`)
-- always truncates images to pixel dimensions (not spec conform)
-
-Other than the default decoder, `WasmDecoder` is meant to be re-used with follow-up images, which lowers the need to spawn webassembly instances.
-
-TODO: document properties + canUsewasm + DimensionDecoder
-
-
 ### Encoding
 
 For encoding the library provides the following properties:
@@ -194,8 +181,169 @@ Results:
 TODO...
 
 
+
+### Decoder usage
+
+For casual usage and when you have the full image data at hand,
+you can use the convenient functions `decode` or `decodeAsync`.
+
+_Example (Typescript):_
+```typescript
+import { decode, decodeAsync, ISixelDecoderOptions } from 'sixel';
+
+// some options
+const OPTIONS: ISixelDecoderOptions = {
+    memoryLimit: 65536 * 256, // limit pixel memory to 16 MB (2048 x 2048 pixels)
+    ...
+};
+
+// in nodejs or web worker context
+const result = decode(some_data, OPTIONS);
+someRawImageAction(result.data32, result.width, result.height);
+
+// in browser main context
+decodeAsync(some_data, OPTIONS)
+  .then(result => someRawImageAction(result.data32, result.width, result.height));
+```
+
+These functions are much easier to use than the stream decoder,
+but come with a performance penalty of ~25% due to bootstrapping into
+the wasm module everytime. Do not use them, if you have multiple images to decode.
+Also they cannot be used for chunked data.
+
+For more advanced use cases with multiple images or chunked data,
+use the stream decoder directly.
+
+_Example (Typescript):_
+```typescript
+import { Decoder, DecoderAsync, ISixelDecoderOptions } from 'sixel';
+
+// some options
+const OPTIONS: ISixelDecoderOptions = {
+    memoryLimit: 65536 * 256, // limit pixel memory to 16 MB (2048 x 2048 pixels)
+    ...
+};
+
+// in nodejs or web worker context
+const decoder = new Decoder(OPTIONS);
+// in browser main context
+const decoder = DecoderAsync(OPTIONS);
+
+for (image of images) {
+    // initialize for next image with defaults
+    // for a more terminal like behavior you may want to override default settings
+    // with init arguments, e.g. set fillColor to BG color / reflect palette changes
+    decoder.init();
+
+    // for every incoming chunk call decode
+    for (chunk of image.data_chunks) {
+        decoder.decode(chunk);
+        // optional: check your memory limits
+        if (decoder.memoryUsage > YOUR_LIMIT) {
+        // the decoder is meant to be resilient for exceptional conditions
+        // and can be re-used after calling .release (if not, please file a bug)
+        // (for simplicity example exists whole loop)
+        decoder.release();
+        throw new Error('dont like your data, way too big');
+        }
+        // optional: grab partial data (useful for slow transmission)
+        somePartialRawImageAction(decoder.data32, decoder.width, decoder.height);
+    }
+
+    // image finished, grab pixels and dimensions
+    someRawImageAction(decoder.data32, decoder.width, decoder.height);
+
+    // optional: release held pixel memory
+    decoder.release();
+}
+```
+
+
+__Note on decoder memory handling__
+
+The examples above all contain some sort of memory limit notions. This is needed,
+because sixel image data does not strictly announce dimensions upfront,
+instead incoming data may implicitly expand image dimensions. While the decoder already
+limits the max width of an image with a compile time setting,
+there is no good way to limit the height of an image (can run "forever").
+
+To not run into out of memory issues the decoder respects an upper memory limit for the pixel array.
+The default limit is set rather high (hardcoded to 128 MB) and can be adjusted in the decoder options
+as `memoryLimit` in bytes. You should always adjust that value to your needs.
+
+During chunk decoding the memory usage can be tracked with `memoryUsage`. Other than `memoryLimit`,
+this value also accounts the static memory taken by the wasm module, thus is slightly higher and
+closer to the real usage of the decoder. Note that the decoder will try to pre-allocate the pixel array,
+if it can derive the dimensions early, thus `memoryUsage` might not change anymore for subsequent
+chunks after an initial jump. If re-allocation is needed during decoding, the decoder will hold up to twice
+of `memoryLimit` for a short amount of time.
+
+During decoding the decoder will throw an error, if the needed pixel memory exceeds `memoryLimit`.
+
+Between multiple images the decoder will not free the pixel memory of the previous image.
+This is an optimization to lower allocation and GC pressure of the decoder.
+Call `release` after decoding to explicitly free the pixel memory.
+
+Rules of thumb regarding memory:
+- set `memoryLimit` to a more realistic value, e.g. 64MB for 4096 x 4096 pixels
+- conditionally call `release` after image decoding, e.g. check if  `memoryUsage` stays within your expectations
+- under memory pressure set `memoryLimit` rather low, always call `release`
+
+
+### Encoder usage
+
+TODO...
+
+
+### Package format and browser bundles
+
+The node package comes as CommonJS and can be used as usual.
+An ESM package version is planned for a later release.
+
+For easier usage in the browser the package contains several prebuilt bundles under `/dist`:
+- decode - color functions, default palettes and decoder
+- encode - color functions, default palettes and encoder
+- full - full package containing all definitions.
+
+The browser bundles come in UMD and ESM flavors. Note that the UMD bundles export
+the symbols under `sixel`.
+
+Some usage examples:
+- vanilla usage with UMD version:
+  ```html
+  <script nomodule src="/path/to/decode.umd.js"></script>
+  ...
+  <script>
+    sixel.decodeAsync(some_data)
+      .then(result => someRawImageAction(result.data32, result.width, result.height));
+  </script>
+  ```
+- ESM example:
+  ```html
+  <script type="module">
+    import { decodeAsync } from '/path/to/decode.esm.js';
+
+    decodeAsync(some_data)
+      .then(result => someRawImageAction(result.data32, result.width, result.height));
+
+    // or with on-demand importing:
+    import('/path/to/decode.esm.js')
+      .then(m => m.decodeAsync(some_data))
+      .then(result => someRawImageAction(result.data32, result.width, result.height));
+  </script>
+  ```
+- web worker example:
+  ```js
+  importScripts('/path/to/decode.umd.js');
+
+  // in web worker we are free to use the sync variants:
+  const result = sixel.decode(some_data);
+  someRawImageAction(result.data32, result.width, result.height);
+  ```
+
+
 ### Status
-Currently beta, still more tests to come.
+Currently beta, still more tests to come. Also the API might still change.
 
 
 ### References
