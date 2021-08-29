@@ -25,7 +25,7 @@ export {
 } from './Colors';
 export {
   IDecodeResult,
-  IDecoderOptions as ISixelDecoderOptions,
+  IDecoderOptions,
   RGBA8888,
   RGBColor,
   UintTypedArray

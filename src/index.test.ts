@@ -100,7 +100,7 @@ describe('encode - decode cycles', () => {
     // encode
     const sixels = sixelEncode(source8, 100, 100, palette);
     // decode
-    const imgDec = new SixelDecoder();
+    const imgDec = new SixelDecoder(0, new Uint32Array(256));
     imgDec.decodeString(sixels);
     imgDec.toPixelData(target8, 100, 100);
     // compare

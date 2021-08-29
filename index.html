@@ -60,7 +60,6 @@
   Reencoded with img2sixel:<br>
   <canvas id="output2" style="border: 1px solid black"></canvas>
   <script src="/dist/bundle.js"></script>
-  <script src="/dist/decode.umd.js"></script>
   
   <script id="sampsa" type="application/json"></script>
   <script>
@@ -200,7 +199,7 @@ async function setImage(s) {
       clearInterval(drawHandle);
     } else {
       img.decode(bytes);
-      decodeWasm(bytes);
+      //decodeWasm(bytes);
       wasmDecoder.decode(bytes);
 
       //import('/dist/decode.es6.js').then(m => m.sixelDecodeAsync(bytes)).then(r => {
@@ -233,7 +232,7 @@ async function setImage(s) {
   // output
   start = new Date();
   drawImage(img);
-  //drawImageWasm();
+  drawImageWasm();
   console.log('output to canvas time', (new Date()) - start);
 }
 

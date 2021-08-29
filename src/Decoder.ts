@@ -24,12 +24,10 @@ function decodeBase64(s: string): Uint8Array {
 const WASM_BYTES = decodeBase64(LIMITS.BYTES);
 let WASM_MODULE: WebAssembly.Module | undefined;
 
-// FIXME: change in Color.ts
-const DEFAULT_PALETTE = new Uint32Array(PALETTE_VT340_COLOR);
-
-
+// empty canvas
 const NULL_CANVAS = new Uint32Array();
 
+// parser operation modes
 const enum ParseMode {
   M0 = 0,   // image processing mode still undecided
   M1 = 1,   // level 1 image or level 2 + truncate=false
@@ -55,7 +53,7 @@ const DEFAULT_OPTIONS: IDecoderOptionsInternal = {
   memoryLimit: 2048 * 65536,
   sixelColor: DEFAULT_FOREGROUND,
   fillColor: DEFAULT_BACKGROUND,
-  palette: DEFAULT_PALETTE,
+  palette: PALETTE_VT340_COLOR,
   paletteLimit: LIMITS.PALETTE_SIZE,
   truncate: true
 };
@@ -243,7 +241,7 @@ export class Decoder {
     this._chunk = new Uint8Array(this._wasm.memory.buffer, this._wasm.get_chunk_address(), LIMITS.CHUNK_SIZE);
     this._states = new Uint32Array(this._wasm.memory.buffer, this._wasm.get_state_address(), 12);
     this._palette = new Uint32Array(this._wasm.memory.buffer, this._wasm.get_palette_address(), LIMITS.PALETTE_SIZE);
-    this._palette.set(DEFAULT_PALETTE);
+    this._palette.set(this._opts.palette);
     this._pSrc = new Uint32Array(this._wasm.memory.buffer, this._wasm.get_p0_address());
     this._wasm.init(DEFAULT_FOREGROUND, 0, LIMITS.PALETTE_SIZE, 0);
   }

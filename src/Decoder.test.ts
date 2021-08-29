@@ -17,7 +17,7 @@ function s2b(s: string): Uint8Array {
   return result;
 }
 
-describe.only('WasmDecoder', () => {
+describe.skip('WasmDecoder', () => {
   it('should have loaded wasm data', () => {
     assert.strictEqual(LIMITS.CHUNK_SIZE, 16384);
     assert.strictEqual(LIMITS.PALETTE_SIZE, 4096);

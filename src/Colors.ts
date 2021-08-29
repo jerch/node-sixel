@@ -6,6 +6,9 @@
 import { RGBA8888, RGBColor } from './Types';
 
 
+// FIXME: cleanup this mess, move things either to decoder/encoder, keep only shared things
+
+
 // system endianess
 export const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
 if (BIG_ENDIAN) {
@@ -129,6 +132,8 @@ export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
  * default palettes
  */
 
+// FIXME: move palettes to Decoder.ts
+
 /**
  * 16 predefined color registers of VT340 (values in %):
  * ```
@@ -154,7 +159,7 @@ export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
  *
  * @see https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
 */
-export const PALETTE_VT340_COLOR = [
+export const PALETTE_VT340_COLOR = new Uint32Array([
   normalizeRGB( 0,  0,  0),
   normalizeRGB(20, 20, 80),
   normalizeRGB(80, 13, 13),
@@ -171,7 +176,7 @@ export const PALETTE_VT340_COLOR = [
   normalizeRGB(33, 60, 60),
   normalizeRGB(60, 60, 33),
   normalizeRGB(80, 80, 80)
-];
+]);
 
 /**
  * 16 predefined monochrome registers of VT340 (values in %):
@@ -197,7 +202,7 @@ export const PALETTE_VT340_COLOR = [
  *
  * @see https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
  */
-export const PALETTE_VT340_GREY = [
+export const PALETTE_VT340_GREY = new Uint32Array([
   normalizeRGB( 0,  0,  0),
   normalizeRGB(13, 13, 13),
   normalizeRGB(26, 26, 26),
@@ -214,7 +219,7 @@ export const PALETTE_VT340_GREY = [
   normalizeRGB(20, 20, 20),
   normalizeRGB(33, 33, 33),
   normalizeRGB(46, 46, 46)
-];
+]);
 
 /**
  * 256 predefined ANSI colors.
@@ -254,7 +259,7 @@ export const PALETTE_ANSI_256 = (() => {
   for (let v = 8; v <= 238; v += 10) {
     p.push(toRGBA8888(v, v, v));
   }
-  return p;
+  return new Uint32Array(p);
 })();
 
 /**
