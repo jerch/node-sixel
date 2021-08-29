@@ -1,7 +1,7 @@
 testfiles
-dist
 *.png
 *.jpg
+*.sixel
 node_example*
 index.html
 sixel_textcursor.sh
@@ -18,3 +18,4 @@ img2sixel.js
 .vscode
 lib-esm
 emsdk
+bin

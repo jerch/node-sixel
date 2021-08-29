@@ -3,7 +3,7 @@
  * @license MIT
  */
 
-import { IDecodeResult, InstanceLike, ISixelDecoderOptions, ISixelDecoderOptionsInternal, IWasmDecoderExports, RGBA8888, UintTypedArray } from './Types';
+import { IDecodeResult, InstanceLike, IDecoderOptions, IDecoderOptionsInternal, IWasmDecoderExports, RGBA8888, UintTypedArray } from './Types';
 import { DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, PALETTE_VT340_COLOR } from './Colors';
 import { LIMITS } from './wasm';
 
@@ -51,7 +51,7 @@ class CallbackProxy {
 
 
 // default decoder options
-const DEFAULT_OPTIONS: ISixelDecoderOptionsInternal = {
+const DEFAULT_OPTIONS: IDecoderOptionsInternal = {
   memoryLimit: 2048 * 65536,
   sixelColor: DEFAULT_FOREGROUND,
   fillColor: DEFAULT_BACKGROUND,
@@ -65,7 +65,7 @@ const DEFAULT_OPTIONS: ISixelDecoderOptionsInternal = {
  * Create a decoder instance asynchronously.
  * To be used in the browser main thread.
  */
-export function DecoderAsync(opts?: ISixelDecoderOptions): Promise<Decoder> {
+export function DecoderAsync(opts?: IDecoderOptions): Promise<Decoder> {
   const cbProxy = new CallbackProxy();
   const importObj: any = {
     env: {
@@ -114,7 +114,7 @@ export function DecoderAsync(opts?: ISixelDecoderOptions): Promise<Decoder> {
  * could not be decided yet.
  */
 export class Decoder {
-  private _opts: ISixelDecoderOptionsInternal;
+  private _opts: IDecoderOptionsInternal;
   private _instance: WebAssembly.Instance;
   private _wasm: IWasmDecoderExports;
   private _states: Uint32Array;
@@ -218,7 +218,7 @@ export class Decoder {
    * For instantiation in the browser main thread use `WasmDecoderAsync` instead.
    */
   constructor(
-    opts?: ISixelDecoderOptions,
+    opts?: IDecoderOptions,
     _instance?: WebAssembly.Instance,
     _cbProxy?: CallbackProxy
   ) {
@@ -482,7 +482,7 @@ export class Decoder {
  */
  export function decode(
   data: UintTypedArray | string,
-  opts?: ISixelDecoderOptions
+  opts?: IDecoderOptions
 ): IDecodeResult {
   const dec = new Decoder(opts);
   dec.init();
@@ -497,7 +497,7 @@ export class Decoder {
  */
 export async function decodeAsync(
   data: UintTypedArray | string,
-  opts?: ISixelDecoderOptions
+  opts?: IDecoderOptions
 ): Promise<IDecodeResult> {
   const dec = await DecoderAsync(opts);
   dec.init();

@@ -38,14 +38,9 @@ export interface IQuantResult {
   palette: number[];
 }
 
-
-
-
-
-
-
-
-
+/**
+ * wasm decoder export interface.
+ */
 export interface IWasmDecoderExports extends Record<string, WebAssembly.ExportValue> {
   memory: WebAssembly.Memory;
   get_state_address(): number;
@@ -57,7 +52,10 @@ export interface IWasmDecoderExports extends Record<string, WebAssembly.ExportVa
   current_width(): number;
 }
 
-export interface ISixelDecoderOptions {
+/**
+ * Decoder options.
+ */
+export interface IDecoderOptions {
   /**
    * Maximum memory in bytes a decoder instance is allowed to allocate during decoding.
    * Exceeding this value will reset the decoder (abort current decoding + release memory)
@@ -98,15 +96,9 @@ export interface ISixelDecoderOptions {
   truncate?: boolean;
 }
 
-export type ISixelDecoderOptionsInternal = {
-  [P in keyof ISixelDecoderOptions]-?: ISixelDecoderOptions[P];
-};
-
-export interface InstanceLike extends WebAssembly.Instance {
-  module?: WebAssembly.Module;
-  instance?: WebAssembly.Instance;
-}
-
+/**
+ * Return type of decode and decodeAsync.
+ */
 export interface IDecodeResult {
   width: number;
   height: number;
@@ -114,56 +106,26 @@ export interface IDecodeResult {
 }
 
 
+/**
+ * Internal types.
+ */
 
 
+// decoder options used internally
+export type IDecoderOptionsInternal = {
+  [P in keyof IDecoderOptions]-?: IDecoderOptions[P];
+};
 
-
-
-// OLD (to be removed)
-
-export interface IRasterAttributes {
-  numerator: number;
-  denominator: number;
-  width: number;
-  height: number;
+// type helper for DecoderAsync
+export interface InstanceLike extends WebAssembly.Instance {
+  module?: WebAssembly.Module;
+  instance?: WebAssembly.Instance;
 }
 
-export interface ISixelDecoderCtor {
-  new(opts?: ISixelDecoderOptionsInternal): ISixelDecoder;
-}
 
-export interface ISixelDecoder {
-  width: number;
-  height: number;
-  rasterAttributes: IRasterAttributes;
-  realWidth: number;
-  realHeight: number;
-  fillColor: RGBA8888;
-  memoryUsage: number;
-  decode(data: UintTypedArray, start?: number, end?: number): void;
-  decodeString(data: string, start: number, end: number): void;
-  newImage(fillColor?: number, palette?: Uint32Array, paletteLimit?: number): void;
-  reset?(): void;
-
-  // image data
-  palette: Uint32Array;     // palette colors - issue: how to go about fill color? (xterm uses slot 0)
-  data32?: Uint32Array;     // pixels in RGBA | indexed (with fillColor at paletteLength)
-
-  // do we need this?maybe to do indexed --> canvas transition for terminal mode, NOOP in printer mode
-  endImage?(): Uint8Array | Uint16Array | Uint32Array;
-}
-
-export interface ISixelDecoderImpl {
-  width: number;
-  height: number;
-  init(width: number, height: number, fillColor?: RGBA8888, palette?: Uint32Array, paletteLimit?: number): void;
-  decode(data: UintTypedArray, start?: number, end?: number): void;
-  decodeString(data: string, start?: number, end?: number): void;
-  readonly data32: Uint32Array;
-  readonly palette: Uint32Array;
-  readonly memoryUsage: number;
-}
-
+/**
+ * OLD (to be removed)
+ */
 
 export const enum SixelState {
   DATA = 0,
@@ -181,18 +143,4 @@ export const enum SixelAction {
   STORE_PARAM = 5,
   SHIFT_PARAM = 6,
   APPLY_PARAM = 7
-}
-
-export interface ISixelDimensions {
-  // pixel ratio values (ignored by SixelDecoder)
-  numerator: number;
-  denominator: number;
-  // image width
-  width: number;
-  // image height
-  height: number;
-  // index in active chunk to continue decoding
-  index: number;
-  // SIXEL conformance level
-  level: 1 | 2;
 }
