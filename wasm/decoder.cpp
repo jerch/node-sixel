@@ -473,7 +473,7 @@ void decode_raster(int start, int end) {
     if (ps.mode == M2) reset_line_m2();
     else reset_line_m1();
     ps.abort = mode_parsed(ps.mode);
-    if (c < c_end && !ps.abort) DECODERS[ps.mode](start, end);
+    if (!ps.abort) DECODERS[ps.mode](start, end);
   }
 }
 
