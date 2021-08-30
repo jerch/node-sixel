@@ -296,7 +296,7 @@ void decode_m1(int start, int end) {
         state = ST_DATA;
       }
       while (unsigned(code - 63) < 64) {
-        if (cur >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();
+        if (cur >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();  // FIXME: MAX_WIDTH is exp here
         put_single(code - 63, color, cur++);
         code = *c++ & 0x7F;
       };
@@ -422,6 +422,8 @@ void decode_raster(int start, int end) {
     int code = *c++ & 0x7F;
     if (ps.state == ST_DATA) {
       if (code == ST_ATTR) {
+        ps.params[0] = 0;
+        ps.p_length = 1;
         ps.state = ST_ATTR;
       } else
       if (unsigned(code - 63) < 64 || code == 33 || code == 35 || code == 36 || code == 45) {
@@ -448,7 +450,7 @@ void decode_raster(int start, int end) {
         ps.mode = ps.truncate ? M2 : M1;
         ps.r_num = ps.params[0];
         ps.r_denom = ps.params[1];
-        ps.r_width = ps.params[2];
+        ps.r_width = ps.params[2];    // investigate: Should omitted P3/P4 default to 1 as well?
         ps.r_height = ps.params[3];
         ps.state = ST_DATA;
         ps.width = ps.truncate ? (ps.r_width < MAX_WIDTH ? ps.r_width : MAX_WIDTH) + 4 : 0;

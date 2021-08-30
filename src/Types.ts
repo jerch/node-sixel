@@ -38,19 +38,6 @@ export interface IQuantResult {
   palette: number[];
 }
 
-/**
- * wasm decoder export interface.
- */
-export interface IWasmDecoderExports extends Record<string, WebAssembly.ExportValue> {
-  memory: WebAssembly.Memory;
-  get_state_address(): number;
-  get_chunk_address(): number;
-  get_p0_address(): number;
-  get_palette_address(): number;
-  init(sixelColor: number, fillColor: number, paletteLimit: number, truncate: number): void;
-  decode(start: number, end: number): void;
-  current_width(): number;
-}
 
 /**
  * Decoder options.
@@ -105,6 +92,23 @@ export interface IDecodeResult {
   data32: Uint32Array;
 }
 
+export interface IDecoderProperties {
+  width: number;
+  height: number;
+  mode: ParseMode;
+  level: number,
+  truncate: boolean;
+  paletteLimit: number;
+  fillColor: RGBA8888;
+  memUsage: number;
+  rasterAttributes: {
+    numerator: number;
+    denominator: number;
+    width: number;
+    height: number;
+  }
+}
+
 
 /**
  * Internal types.
@@ -120,6 +124,30 @@ export type IDecoderOptionsInternal = {
 export interface InstanceLike extends WebAssembly.Instance {
   module?: WebAssembly.Module;
   instance?: WebAssembly.Instance;
+}
+
+// parser operation modes
+export const enum ParseMode {
+  M0 = 0,   // image processing mode still undecided
+  M1 = 1,   // level 1 image or level 2 + truncate=false
+  M2 = 2    // level 2 + truncate=true
+}
+
+// wasm decoder export interface
+export interface IWasmDecoderExports extends Record<string, WebAssembly.ExportValue> {
+  memory: WebAssembly.Memory;
+  get_state_address(): number;
+  get_chunk_address(): number;
+  get_p0_address(): number;
+  get_palette_address(): number;
+  init(sixelColor: number, fillColor: number, paletteLimit: number, truncate: number): void;
+  decode(start: number, end: number): void;
+  current_width(): number;
+}
+
+// wasm decoder
+export interface IWasmDecoder extends WebAssembly.Instance {
+  exports: IWasmDecoderExports;
 }
 
 

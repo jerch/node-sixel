@@ -3,7 +3,7 @@
  * @license MIT
  */
 
-import { IDecodeResult, InstanceLike, IDecoderOptions, IDecoderOptionsInternal, IWasmDecoderExports, RGBA8888, UintTypedArray } from './Types';
+import { IDecodeResult, InstanceLike, IDecoderOptions, IDecoderOptionsInternal, IWasmDecoderExports, RGBA8888, UintTypedArray, ParseMode, IDecoderProperties, IWasmDecoder } from './Types';
 import { DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, PALETTE_VT340_COLOR } from './Colors';
 import { LIMITS } from './wasm';
 
@@ -26,13 +26,6 @@ let WASM_MODULE: WebAssembly.Module | undefined;
 
 // empty canvas
 const NULL_CANVAS = new Uint32Array();
-
-// parser operation modes
-const enum ParseMode {
-  M0 = 0,   // image processing mode still undecided
-  M1 = 1,   // level 1 image or level 2 + truncate=false
-  M2 = 2    // level 2 + truncate=true
-}
 
 
 // proxy for lazy binding of decoder methods to wasm env callbacks
@@ -65,7 +58,7 @@ const DEFAULT_OPTIONS: IDecoderOptionsInternal = {
  */
 export function DecoderAsync(opts?: IDecoderOptions): Promise<Decoder> {
   const cbProxy = new CallbackProxy();
-  const importObj: any = {
+  const importObj = {
     env: {
       handle_band: cbProxy.handle_band.bind(cbProxy),
       mode_parsed: cbProxy.mode_parsed.bind(cbProxy)
@@ -113,7 +106,7 @@ export function DecoderAsync(opts?: IDecoderOptions): Promise<Decoder> {
  */
 export class Decoder {
   private _opts: IDecoderOptionsInternal;
-  private _instance: WebAssembly.Instance;
+  private _instance: IWasmDecoder;
   private _wasm: IWasmDecoderExports;
   private _states: Uint32Array;
   private _chunk: Uint8Array;
@@ -236,14 +229,14 @@ export class Decoder {
       _cbProxy!.bandHandler = this._handle_band.bind(this);
       _cbProxy!.modeHandler = this._initCanvas.bind(this);
     }
-    this._instance = _instance;
-    this._wasm = this._instance.exports as IWasmDecoderExports;
+    this._instance = _instance as IWasmDecoder;
+    this._wasm = this._instance.exports;
     this._chunk = new Uint8Array(this._wasm.memory.buffer, this._wasm.get_chunk_address(), LIMITS.CHUNK_SIZE);
     this._states = new Uint32Array(this._wasm.memory.buffer, this._wasm.get_state_address(), 12);
     this._palette = new Uint32Array(this._wasm.memory.buffer, this._wasm.get_palette_address(), LIMITS.PALETTE_SIZE);
     this._palette.set(this._opts.palette);
     this._pSrc = new Uint32Array(this._wasm.memory.buffer, this._wasm.get_p0_address());
-    this._wasm.init(DEFAULT_FOREGROUND, 0, LIMITS.PALETTE_SIZE, 0);
+    this._wasm.init(DEFAULT_FOREGROUND, 0, this._opts.paletteLimit, 0);
   }
 
   /**
@@ -293,13 +286,13 @@ export class Decoder {
   /**
    * Get various properties of the decoder and the current image.
    */
-  public get properties(): any {
+  public get properties(): IDecoderProperties {
     return {
       width: this.width,
       height: this.height,
       mode: this._mode,
       level: this._level,
-      truncate: this._truncate,
+      truncate: !!this._truncate,
       paletteLimit: this._paletteLimit,
       fillColor: this._fillColor,
       memUsage: this.memoryUsage,
@@ -458,7 +451,7 @@ export class Decoder {
     this._minWidth = LIMITS.MAX_WIDTH;
     // also nullify parser states in wasm to avoid
     // width/height reporting potential out-of-bound values
-    this._wasm.init(DEFAULT_FOREGROUND, 0, LIMITS.PALETTE_SIZE, 0);
+    this._wasm.init(DEFAULT_FOREGROUND, 0, this._opts.paletteLimit, 0);
   }
 }
 
