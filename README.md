@@ -126,8 +126,8 @@ Furthermore the library exposes some convenient properties:
 Install the library with `npm install sixel`.
 
 ### Examples and browser demo
-See the example files for decoding/encoding in nodejs. Note that the examples and the browser demo are not part
-of the npm package, clone the repo and run `npm install` if you want to see them in action.
+See the example files in `/examples` for decoding/encoding in nodejs. Note that the examples and the
+browser demo are not part of the npm package, clone the repo and run `npm install` if you want to see them in action.
 
 Decoding can also be tested in the browser after `npm start` under `localhost:8080`.
 

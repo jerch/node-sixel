@@ -130,8 +130,8 @@ const TEST1 = fs.readFileSync(__dirname + '/../testfiles/test1_clean.sixel');
 const TEST2 = fs.readFileSync(__dirname + '/../testfiles/test2_clean.sixel');
 const SAMPSA = fs.readFileSync(__dirname + '/../testfiles/sampsa_reencoded_clean.six');
 
-const FHD1 = fs.readFileSync(__dirname + '/../testfiles/fhd1_clean.six');
-const FHD2 = fs.readFileSync(__dirname + '/../testfiles/fhd2_clean.six');
+//const FHD1 = fs.readFileSync(__dirname + '/../testfiles/fhd1_clean.six');
+//const FHD2 = fs.readFileSync(__dirname + '/../testfiles/fhd2_clean.six');
 
 // create 1920 x 1080 random noise in 12bit-RGB
 // const channelValues = Array.from(Array(16).keys()).map(v => v * 16);
@@ -151,7 +151,7 @@ const FHD2 = fs.readFileSync(__dirname + '/../testfiles/fhd2_clean.six');
 // fs.writeFileSync('testfiles/fullhd_12bit_noise_clean.six', NOISE_STRING);
 const NOISE = fs.readFileSync(__dirname + '/../testfiles/fullhd_12bit_noise_clean.six');
 
-perfContext('decode - testfiles (DefaultDecoder)', () => {
+perfContext('decode - testfiles (SixelDecoder)', () => {
   new ThroughputRuntimeCase('test1_clean.sixel', () => {
     const dec = new SixelDecoder();
     dec.decode(TEST1);
@@ -208,16 +208,16 @@ perfContext('decode - testfiles (WasmDecoder)', () => {
     return { payloadSize: SIXELBYTES.length, pixelSize: 640 * 480 };
   }, { repeat: 20 }).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
 
-  new ThroughputRuntimeCase('FullHD 1', () => {
-    wasmDec.init();
-    wasmDec.decode(FHD1);
-    return { payloadSize: FHD1.length, pixelSize: wasmDec.width * wasmDec.height };
-  }, { repeat: 20 }).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
-  new ThroughputRuntimeCase('FullHD 2', () => {
-    wasmDec.init();
-    wasmDec.decode(FHD2);
-    return { payloadSize: FHD2.length, pixelSize: wasmDec.width * wasmDec.height };
-  }, { repeat: 20 }).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
+  //new ThroughputRuntimeCase('FullHD 1', () => {
+  //  wasmDec.init();
+  //  wasmDec.decode(FHD1);
+  //  return { payloadSize: FHD1.length, pixelSize: wasmDec.width * wasmDec.height };
+  //}, { repeat: 20 }).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
+  //new ThroughputRuntimeCase('FullHD 2', () => {
+  //  wasmDec.init();
+  //  wasmDec.decode(FHD2);
+  //  return { payloadSize: FHD2.length, pixelSize: wasmDec.width * wasmDec.height };
+  //}, { repeat: 20 }).showAverageRuntime().showAverageThroughput().postAll(sixelStats);
 });
 
 function sixelStats(results: ICaseResult[], perfCase: IPerfCase) {

@@ -1,4 +1,4 @@
-const { SixelDecoder, introducer, FINALIZER, sixelEncode } = require('./lib/index');
+const { introducer, FINALIZER, sixelEncode, Decoder } = require('./lib/index');
 const fs = require('fs');
 
 /**
@@ -12,9 +12,11 @@ const fs = require('fs');
  * the _clean.six files are stripped down to the <SIXEL DATA> part.
  */
 fs.readFile('testfiles/biplane_clean.six', (err, data) => {
-  // decode from file
-  const image = new SixelDecoder();
-  image.decode(data);
+
+  // decoding with sync decoder (does not work in browser main!)
+  const dec = new Decoder();
+  dec.init();
+  dec.decode(data);
 
   // insert a new line in terminal
   // bug with boticelli image - jumps one line up in xterm?
@@ -24,9 +26,7 @@ fs.readFile('testfiles/biplane_clean.six', (err, data) => {
   console.log(introducer(1));
   try {
     // encode to SIXEL data and write to output
-    const data = new Uint8Array(image.width * image.height * 4);
-    image.toPixelData(data, image.width, image.height);
-    console.log(sixelEncode(data, image.width, image.height, image.palette));
+    console.log(sixelEncode(new Uint8Array(dec.data32.buffer), dec.width, dec.height, dec.palette));
   } finally {
     // never forget the finalizer or the terminal will "hang"
     console.log(FINALIZER);

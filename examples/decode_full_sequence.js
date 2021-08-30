@@ -1,9 +1,11 @@
-const { SixelDecoder, toRGBA8888 } = require('./lib/index');
+const { toRGBA8888, Decoder } = require('./lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
 const AnsiParser = require('node-ansiparser');
 
+// create a sixel decoder instance (sync version, use DecoderAsync in browser main)
+const decoder = new Decoder();
 
 /**
  * Despite the other decode examples we use the normal testfiles here
@@ -14,7 +16,6 @@ const AnsiParser = require('node-ansiparser');
  * some of them have 8bit control characters that get stripped with 'utf-8'.
  */
 fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
-  let image = null;
 
   // terminal object needed for the sequence parser
   // we are only interested in the DCS calls, thus skip the other methods
@@ -35,15 +36,17 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
         // if set to 1 we should set fillColor to 0 (leave transparent)
         // else set to background color from the terminal
         // hint: try changing the test file or the color to see the effect of this setting
-        image = new SixelDecoder(params[1] === 1 ? 0 : this.backgroundColor);
+
+        // init a new image (null for palette means to keep the current loaded one)
+        decoder.init(params[1] === 1 ? 0 : this.backgroundColor, null, 256);
         this.inSixel = true;
       }
     },
 
     // inst_P: called for DCS payload chunks
     inst_P(chunk) {
-      if (this.inSixel && image) {
-        image.decodeString(chunk);
+      if (this.inSixel) {
+        decoder.decodeString(chunk);
       }
     },
 
@@ -57,11 +60,11 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
         // can continue image handling:
 
         // transfer bitmap data to ImageData object
-        const imageData = createImageData(image.width, image.height);
-        image.toPixelData(imageData.data, image.width, image.height);
+        const imageData = createImageData(decoder.width, decoder.height);
+        new Uint32Array(imageData.data.buffer).set(decoder.data32);
 
         // draw ImageData to canvas
-        const canvas = createCanvas(image.width, image.height);
+        const canvas = createCanvas(decoder.width, decoder.height);
         const ctx = canvas.getContext('2d');
         ctx.putImageData(imageData, 0, 0);
 
@@ -71,6 +74,9 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
         const stream = canvas.createPNGStream();
         stream.pipe(out);
         out.on('finish', () => open(targetFile));
+
+        // free ressources on decoder
+        decoder.release();
       }
     }
   };
