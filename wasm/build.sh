@@ -28,6 +28,7 @@ PALETTE_SIZE=4096
 # MAX_WIDTH
 # Maximum width of a pixel line the decoder can handle.
 # Changing this will also change the memory needs below.
+# This value must be a multiple of 128 to stay in line with the clear logic.
 MAX_WIDTH=16384
 
 # MEMORY

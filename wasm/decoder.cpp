@@ -296,7 +296,7 @@ void decode_m1(int start, int end) {
         state = ST_DATA;
       }
       while (unsigned(code - 63) < 64) {
-        if (cur >= ps.cleared_width) clear_next();
+        if (cur >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();
         put_single(code - 63, color, cur++);
         code = *c++ & 0x7F;
       };
