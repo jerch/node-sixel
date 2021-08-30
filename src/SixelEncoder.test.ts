@@ -42,13 +42,13 @@ describe('encoding', () => {
       assert.throws(() => { sixelEncode(new Uint8Array(4), 1, 1, []); }, /palette must not be empty/);
     });
     describe('palette handling', () => {
-      function getPalFromSixel(sixels: string): Uint32Array {
+      function getPalFromSixel(sixels: string): number[] {
         const pal: RGBA8888[] = [];
         sixels.split('#')
           .map(el => el.split(';'))
           .filter(el => el.length === 5)
           .forEach(e => { pal[~~e[0]] = normalizeRGB(~~e[2], ~~e[3], ~~e[4]); });
-        return new Uint32Array(pal);
+        return pal;
       }
       it('accepts [r, g, b] and RGBA8888 as palette entries', () => {
         const data = new Uint8Array(8);
@@ -56,7 +56,7 @@ describe('encoding', () => {
         const sixels = sixelEncode(data, 2, 1, [[12, 34, 56], [98, 76, 54]]);
         const sixels2 = sixelEncode(data, 2, 1, [toRGBA8888(12, 34, 56), toRGBA8888(98, 76, 54)]);
         // compare with values read by decoder
-        const dec = new SixelDecoder(0, new Uint32Array([0, 0]));
+        const dec = new SixelDecoder(0, [0, 0]);
         dec.decodeString(sixels + '-');
         assert.deepStrictEqual(getPalFromSixel(sixels), dec.palette);
         assert.deepStrictEqual(getPalFromSixel(sixels2), dec.palette);
@@ -74,7 +74,7 @@ describe('encoding', () => {
           toRGBA8888(12, 34, 56)
         ]);
         // compare with values read by decoder
-        const dec = new SixelDecoder(0, new Uint32Array([0, 0]));
+        const dec = new SixelDecoder(0, [0, 0]);
         dec.decodeString(sixels + '-');
         assert.deepStrictEqual(getPalFromSixel(sixels), dec.palette);
         assert.deepStrictEqual(getPalFromSixel(sixels2), dec.palette);

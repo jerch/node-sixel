@@ -278,7 +278,7 @@ export class SixelDecoder {
    */
   constructor(
     public fillColor: RGBA8888 = DEFAULT_BACKGROUND,
-    public palette: Uint32Array = PALETTE_VT340_COLOR,
+    public palette: RGBA8888[] = Array.from(PALETTE_VT340_COLOR),
     public paletteLimit: number = 65536)
   {
     this._currentBand = new SixelBand();

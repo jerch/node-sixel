@@ -249,7 +249,7 @@ describe('SixelDecoder', () => {
           assert.strictEqual(dec.bands[0].width, 2);
         });
         it('COLOR', () => {
-          dec.palette = new Uint32Array([toRGBA8888(1, 2, 3), toRGBA8888(4, 5, 6)]);
+          dec.palette = [toRGBA8888(1, 2, 3), toRGBA8888(4, 5, 6)];
           dec.paletteLimit = 2;
           // slot select
           dec.decodeString('#0$');
