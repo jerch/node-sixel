@@ -156,9 +156,9 @@ static inline int normalize_hls(int hi, int li, int si) {
   float s = ((float) si) / 100;
   float t1 = l < 0.5f ? l * (1 + s) : l * (1 - s) + s;
   float t2 = l * 2 - t1;
-  unsigned char r = 255 * h2c(t1, t2, h + 0.3333333433f);  // + 1.0f / 3
-  unsigned char g = 255 * h2c(t1, t2, h);
-  unsigned char b = 255 * h2c(t1, t2, h - 0.3333333433f);  // - 1.0f / 3
+  unsigned char r = 255 * h2c(t1, t2, h + 0.3333333433f) + 0.5f;  // + 1.0f / 3
+  unsigned char g = 255 * h2c(t1, t2, h) + 0.5f;
+  unsigned char b = 255 * h2c(t1, t2, h - 0.3333333433f) + 0.5f;  // - 1.0f / 3
   return 0xFF000000 | b << 16 | g << 8 | r;
 }
 
