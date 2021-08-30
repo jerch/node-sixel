@@ -57,7 +57,7 @@ describe('encoding', () => {
         const sixels2 = sixelEncode(data, 2, 1, [toRGBA8888(12, 34, 56), toRGBA8888(98, 76, 54)]);
         // compare with values read by decoder
         const dec = new SixelDecoder(0, new Uint32Array([0, 0]));
-        dec.decodeString(sixels+'-');
+        dec.decodeString(sixels + '-');
         assert.deepStrictEqual(getPalFromSixel(sixels), dec.palette);
         assert.deepStrictEqual(getPalFromSixel(sixels2), dec.palette);
         assert.strictEqual(getPalFromSixel(sixels).length, 2);
@@ -75,7 +75,7 @@ describe('encoding', () => {
         ]);
         // compare with values read by decoder
         const dec = new SixelDecoder(0, new Uint32Array([0, 0]));
-        dec.decodeString(sixels+'-');
+        dec.decodeString(sixels + '-');
         assert.deepStrictEqual(getPalFromSixel(sixels), dec.palette);
         assert.deepStrictEqual(getPalFromSixel(sixels2), dec.palette);
         assert.strictEqual(getPalFromSixel(sixels).length, 2);

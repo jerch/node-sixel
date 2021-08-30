@@ -161,7 +161,7 @@ describe('WasmDecoder', () => {
       for (let i = 0; i < 128; ++i) {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString(String.fromCharCode(i));
-        i == 33
+        i === 33
           ? assert.strictEqual(dec.state[15], ST_COMPRESSION)
           : assert.notStrictEqual(dec.state[15], ST_COMPRESSION);
       }
@@ -190,7 +190,7 @@ describe('WasmDecoder', () => {
       for (let i = 0; i < 128; ++i) {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString(String.fromCharCode(i));
-        i == 34
+        i === 34
           ? assert.strictEqual(dec.state[15], ST_ATTR)
           : assert.notStrictEqual(dec.state[15], ST_ATTR);
       }
@@ -267,7 +267,7 @@ describe('WasmDecoder', () => {
       for (let i = 0; i < 128; ++i) {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString(String.fromCharCode(i));
-        i == 35
+        i === 35
           ? assert.strictEqual(dec.state[15], ST_COLOR)
           : assert.notStrictEqual(dec.state[15], ST_COLOR);
       }
@@ -413,7 +413,7 @@ describe('WasmDecoder', () => {
       for (let i = 0; i < 6; ++i) {
         const pixels = dec.getPixels(i).subarray(0, 64);
         for (let pos = 0; pos < 64; ++pos) {
-          assert.strictEqual(pixels[pos], pos & (1<<i) ? sixelColor : fillColor);
+          assert.strictEqual(pixels[pos], pos & (1 << i) ? sixelColor : fillColor);
         }
       }
     });
@@ -426,7 +426,7 @@ describe('WasmDecoder', () => {
       for (let i = 0; i < 6; ++i) {
         const pixels = dec.getPixels(i).subarray(0, 256);
         for (let pos = 0; pos < 256; ++pos) {
-          assert.strictEqual(pixels[pos], (pos/4) & (1<<i) ? sixelColor : fillColor);
+          assert.strictEqual(pixels[pos], (pos / 4) & (1 << i) ? sixelColor : fillColor);
         }
       }
     });
@@ -436,12 +436,12 @@ describe('WasmDecoder', () => {
       dec.w.init(sixelColor, fillColor, 256, 0);
       dec.decodeString('!100000@');
       // should have stopped at MAX_WIDTH-4
-      const comp = new Uint32Array(LIMITS.MAX_WIDTH).fill(255).fill(0, LIMITS.MAX_WIDTH-4);
+      const comp = new Uint32Array(LIMITS.MAX_WIDTH).fill(255).fill(0, LIMITS.MAX_WIDTH - 4);
       assert.deepStrictEqual(dec.getPixels(0), comp);
       // should not overflow into other pixel lines
       assert.deepStrictEqual(dec.getPixels(1), new Uint32Array(LIMITS.MAX_WIDTH));
       // reports clamped width
-      assert.strictEqual(dec.w.current_width(), LIMITS.MAX_WIDTH-4);
+      assert.strictEqual(dec.w.current_width(), LIMITS.MAX_WIDTH - 4);
     });
     it('put single/repeated mixed', () => {
       const sixelColor = 255;
@@ -476,7 +476,7 @@ describe('WasmDecoder', () => {
       assert.strictEqual(dec.state[9], 1);              // lvl1 image
       assert.strictEqual(dec.state[10], ParseMode.M1);  // --> M1
       stack.length = 0;
-      
+
       // level 1 image with partial raster attribs --> M1
       dec.w.init(0, 0, 4, 0);
       assert.strictEqual(dec.state[9], 0);              // lvl0 - undecided
@@ -761,7 +761,7 @@ describe('Decoder', () => {
         assert.strictEqual(pixels[26], 9); assert.strictEqual(pixels[30], 9); assert.strictEqual(pixels[34], 130); // C
         assert.strictEqual(pixels[27], 131); assert.strictEqual(pixels[31], 9); assert.strictEqual(pixels[35], 131); // D
         // check last pixel
-        assert.strictEqual(pixels[pixels.length-1], 9);
+        assert.strictEqual(pixels[pixels.length - 1], 9);
         // current_width
         assert.strictEqual((dec as any)._wasm.current_width(), 4);
         // enter another line
@@ -813,7 +813,7 @@ describe('Decoder', () => {
         assert.strictEqual(pixels[26], 9); assert.strictEqual(pixels[30], 9); assert.strictEqual(pixels[34], 130); // C
         assert.strictEqual(pixels[27], 131); assert.strictEqual(pixels[31], 9); assert.strictEqual(pixels[35], 131); // D
         // check last pixel
-        assert.strictEqual(pixels[pixels.length-1], 9);
+        assert.strictEqual(pixels[pixels.length - 1], 9);
         // current_width
         assert.strictEqual((dec as any)._wasm.current_width(), 4);
         // enter another line
@@ -865,7 +865,7 @@ describe('Decoder', () => {
         assert.strictEqual(pixels[122], 9); assert.strictEqual(pixels[142], 9); assert.strictEqual(pixels[162], 130); // C
         assert.strictEqual(pixels[123], 131); assert.strictEqual(pixels[143], 9); assert.strictEqual(pixels[163], 131); // D
         // check last pixel
-        assert.strictEqual(pixels[pixels.length-1], 9);
+        assert.strictEqual(pixels[pixels.length - 1], 9);
         // current_width
         assert.strictEqual((dec as any)._wasm.current_width(), 20);
         // enter another line

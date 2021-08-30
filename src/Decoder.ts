@@ -67,7 +67,7 @@ export function DecoderAsync(opts?: IDecoderOptions): Promise<Decoder> {
   return WebAssembly.instantiate(WASM_MODULE || WASM_BYTES, importObj)
     .then((inst: InstanceLike) => {
       WASM_MODULE = WASM_MODULE || inst.module;
-      return new Decoder(opts, inst.instance || inst, cbProxy)
+      return new Decoder(opts, inst.instance || inst, cbProxy);
     });
 }
 
@@ -132,7 +132,7 @@ export class Decoder {
   private get _paletteLimit(): number { return this._states[11]; }
 
   private _initCanvas(mode: ParseMode): number {
-    if (mode == ParseMode.M2) {
+    if (mode === ParseMode.M2) {
       const pixels = this.width * this.height;
       if (pixels > this._canvas.length) {
         if (this._opts.memoryLimit && pixels * 4 > this._opts.memoryLimit) {
@@ -142,8 +142,8 @@ export class Decoder {
         this._canvas = new Uint32Array(pixels);
       }
       this._maxWidth = this._width;
-    } else if (mode == ParseMode.M1) {
-      if (this._level == 2) {
+    } else if (mode === ParseMode.M1) {
+      if (this._level === 2) {
         // got raster attributes, use them as initial size hint
         const pixels = Math.min(this._rasterWidth, LIMITS.MAX_WIDTH) * this._rasterHeight;
         if (pixels > this._canvas.length) {
@@ -180,7 +180,7 @@ export class Decoder {
   private _handle_band(width: number): number {
     const adv = this._PIXEL_OFFSET;
     let offset = this._lastOffset;
-    if (this._mode == ParseMode.M2) {
+    if (this._mode === ParseMode.M2) {
       let remaining = this.height - this._currentHeight;
       let c = 0;
       while (c < 6 && remaining > 0) {
@@ -190,7 +190,7 @@ export class Decoder {
       }
       this._lastOffset += width * c;
       this._currentHeight += c;
-    } else if (this._mode == ParseMode.M1) {
+    } else if (this._mode === ParseMode.M1) {
       this._realloc(offset, width * 6);
       this._maxWidth = Math.max(this._maxWidth, width);
       this._minWidth = Math.min(this._minWidth, width);
@@ -302,7 +302,7 @@ export class Decoder {
         width: this._rasterWidth,
         height: this._rasterHeight,
       }
-    }
+    };
   }
 
   /**
@@ -362,14 +362,14 @@ export class Decoder {
    * Also peeks into pixel data of the current band, that got not pushed yet.
    */
   public get data32(): Uint32Array {
-    if (this._mode == ParseMode.M0 || !this.width || !this.height) {
+    if (this._mode === ParseMode.M0 || !this.width || !this.height) {
       return NULL_CANVAS;
     }
 
     // get width of pending band to peek into left-over data
     let currentWidth = this._wasm.current_width();
 
-    if (this._mode == ParseMode.M2) {
+    if (this._mode === ParseMode.M2) {
       let remaining = this.height - this._currentHeight;
       if (remaining > 0) {
         const adv = this._PIXEL_OFFSET;
@@ -387,11 +387,11 @@ export class Decoder {
       return this._canvas.subarray(0, this.width * this.height);
     }
 
-    if (this._mode == ParseMode.M1) {
-      if (this._minWidth == this._maxWidth) {
+    if (this._mode === ParseMode.M1) {
+      if (this._minWidth === this._maxWidth) {
         let escape = false;
         if (currentWidth) {
-          if (currentWidth != this._minWidth) {
+          if (currentWidth !== this._minWidth) {
             escape = true;
           } else {
             const adv = this._PIXEL_OFFSET;
@@ -458,7 +458,7 @@ export class Decoder {
 
 /**
  * Convenient decoding functions for easier usage.
- * 
+ *
  * These can be used for casual decoding of sixel images,
  * that dont come in as stream chunks.
  * Note that the functions instantiate a stream decoder for every call,
@@ -478,7 +478,7 @@ export class Decoder {
   const dec = new Decoder(opts);
   dec.init();
   typeof data === 'string' ? dec.decodeString(data) : dec.decode(data);
-  return { width: dec.width, height: dec.height, data32: dec.data32 }
+  return { width: dec.width, height: dec.height, data32: dec.data32 };
 }
 
 /**
@@ -493,5 +493,5 @@ export async function decodeAsync(
   const dec = await DecoderAsync(opts);
   dec.init();
   typeof data === 'string' ? dec.decodeString(data) : dec.decode(data);
-  return { width: dec.width, height: dec.height, data32: dec.data32 }
+  return { width: dec.width, height: dec.height, data32: dec.data32 };
 }

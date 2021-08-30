@@ -96,7 +96,7 @@ export interface IDecoderProperties {
   width: number;
   height: number;
   mode: ParseMode;
-  level: number,
+  level: number;
   truncate: boolean;
   paletteLimit: number;
   fillColor: RGBA8888;
@@ -106,7 +106,7 @@ export interface IDecoderProperties {
     denominator: number;
     width: number;
     height: number;
-  }
+  };
 }
 
 
