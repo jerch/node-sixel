@@ -1,4 +1,4 @@
-const { decodeAsync, PALETTE_ANSI_256 } = require('./lib/index');
+const { decodeAsync, PALETTE_ANSI_256 } = require('../lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
@@ -15,6 +15,15 @@ const open = require('open');
  */
 fs.readFile('testfiles/screen_clean.six', (err, data) => {
   // example with decodeAsync
+  // about the used options:
+  // - palette:
+  //      colors to start with (some older sixel images dont define
+  //      their colors, instead rely on a predefined default palette)
+  //      default is 16 colors of VT340, here we set it to 256 colors of xterm
+  // - memoryUsage:
+  //      hard limit the pixel memory to avoid running out of memory (default 128 MB)
+  //      note this cannot be approximated from sixel data size without
+  //      parsing (1 kB of sixel data can easily create >10M pixels)
   decodeAsync(data, {palette: PALETTE_ANSI_256, memoryLimit: 65536 * 20})
   .then(result => {
     // transfer bitmap data to ImageData object

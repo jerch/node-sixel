@@ -1,4 +1,4 @@
-const { decodeAsync, image2sixel } = require('./lib/index');
+const { decodeAsync, image2sixel } = require('../lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
@@ -59,8 +59,8 @@ console.log(sixelData);
  * For comparison we also output the image to a PNG file.
  */
 
-// note we strip the first 7 bytes, since they belong to the escape sequence introducer
-// (should be handled by a proper parser, see node_example_decode_full_sequence.js)
+// note: we strip the first 7 bytes, since they belong to the escape sequence introducer
+// (should be handled by a proper sequence parser, see node_example_decode_full_sequence.js)
 decodeAsync(sixelData.slice(7), {fillColor:0, memoryLimit: 65536 *20})
 .then(result => {
   // transfer bitmap data to ImageData object

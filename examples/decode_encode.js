@@ -1,4 +1,4 @@
-const { introducer, FINALIZER, sixelEncode, Decoder } = require('./lib/index');
+const { introducer, FINALIZER, sixelEncode, decode } = require('../lib/index');
 const fs = require('fs');
 
 /**
@@ -13,22 +13,26 @@ const fs = require('fs');
  */
 fs.readFile('testfiles/biplane_clean.six', (err, data) => {
 
-  // decoding with sync decoder (does not work in browser main!)
-  const dec = new Decoder();
-  dec.init();
-  dec.decode(data);
+  // decoding with sync version (does not work in browser main, use decodeAsync there)
+  const img = decode(data);
 
-  // insert a new line in terminal
-  // bug with boticelli image - jumps one line up in xterm?
-  console.log();
-
-  // write SIXEL DCS sequence introducer
-  console.log(introducer(1));
-  try {
-    // encode to SIXEL data and write to output
-    console.log(sixelEncode(new Uint8Array(dec.data32.buffer), dec.width, dec.height, dec.palette));
-  } finally {
-    // never forget the finalizer or the terminal will "hang"
-    console.log(FINALIZER);
+  // extract colors
+  const palette = new Set();
+  for (let i = 0; i < img.data32.length; ++i) {
+    palette.add(img.data32[i]);
   }
+
+  // encode to sixel again
+  const sixelData = sixelEncode(
+    new Uint8Array(img.data32.buffer),
+    img.width,
+    img.height,
+    Array.from(palette)
+  );
+
+  // write to sixel capable terminal
+  // `sixelEncode` gives us only the sixel data part,
+  // to get a full sequence, we need to add the introducer and the finalizer
+  // (never forget the finalizer or the terminal will "hang")
+  console.log(introducer(1) + sixelData + FINALIZER);
 })

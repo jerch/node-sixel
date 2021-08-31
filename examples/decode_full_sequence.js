@@ -1,4 +1,4 @@
-const { toRGBA8888, Decoder } = require('./lib/index');
+const { toRGBA8888, Decoder } = require('../lib/index');
 const { createCanvas, createImageData } = require('canvas');
 const fs = require('fs');
 const open = require('open');
@@ -12,8 +12,8 @@ const decoder = new Decoder();
  * with full DCS sequences. For parsing of the escape sequence we can use `node-anisparser`.
  * 
  * Note that `node-ansiparser` works only with strings, thus we have to set 'utf-8' as file encoding
- * (and use `SixelImage.writeString` later on). This will not work with all testfiles,
- * some of them have 8bit control characters that get stripped with 'utf-8'.
+ * (and use `decodeString` later on). This will not work with all testfiles,
+ * some of them have 8bit control characters that get stripped/scrambled with 'utf-8'.
  */
 fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
 
@@ -37,7 +37,7 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
         // else set to background color from the terminal
         // hint: try changing the test file or the color to see the effect of this setting
 
-        // init a new image (null for palette means to keep the current loaded one)
+        // init a new image (null for `palette` means to keep the current loaded one)
         decoder.init(params[1] === 1 ? 0 : this.backgroundColor, null, 256);
         this.inSixel = true;
       }
@@ -75,13 +75,13 @@ fs.readFile('testfiles/boticelli.six', 'utf-8', (err, data) => {
         stream.pipe(out);
         out.on('finish', () => open(targetFile));
 
-        // free ressources on decoder
+        // free ressources on sixel decoder
         decoder.release();
       }
     }
   };
 
   // create sequence parser and parse the file data
-  var parser = new AnsiParser(terminal);
+  const parser = new AnsiParser(terminal);
   parser.parse(data);
 })
