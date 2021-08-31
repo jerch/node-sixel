@@ -1,6 +1,6 @@
 {
   "name": "sixel",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Sixel image format for node and browser.",
   "main": "./lib/index.js",
   "scripts": {
