@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "ES2020",
+    "target": "ES2017",
+    "rootDir": "src",
+    "outDir": "lib-esm",
+    "sourceMap": true,
+    "declaration": true,
+    "noImplicitAny": true,
+    "strict": true,
+    "moduleResolution": "node"
+  },
+  "exclude": [
+    "node_modules",
+    "scripts",
+    "lib",
+    "lib-esm",
+    "test",
+    "examples"
+  ]
+}

@@ -3,7 +3,7 @@
  * @license MIT
  */
 
-import { assert } from 'chai';
+import * as assert from 'assert';
 import { SixelDecoder, toRGBA8888, sixelEncode } from './index';
 import { RGBA8888 } from './Types';
 
@@ -29,10 +29,10 @@ describe('encode - decode cycles', () => {
     imgDec.decodeString(sixels);
     imgDec.toPixelData(target8.subarray(0, 10 * 4), 10, 1);
     // compare
-    assert.deepEqual(target8, source8);
-    assert.equal(imgDec.width, 10);
-    assert.equal(imgDec.height, 1);
-    assert.equal(imgDec.memUsage, 16 * 6 * 4);  // 4 --> 8 --> 16 * 6 * 4
+    assert.deepStrictEqual(target8, source8);
+    assert.strictEqual(imgDec.width, 10);
+    assert.strictEqual(imgDec.height, 1);
+    assert.strictEqual(imgDec.memUsage, 16 * 6 * 4);  // 4 --> 8 --> 16 * 6 * 4
   });
   it('1x10 black', () => {
     // prepare data
@@ -44,11 +44,11 @@ describe('encode - decode cycles', () => {
     imgDec.decodeString(sixels);
     imgDec.toPixelData(target8.subarray(0, 10 * 4), 1, 10);
     // compare
-    assert.deepEqual(target8, source8);
-    assert.equal(imgDec.width, 1);
-    assert.equal(imgDec.height, 10);
-    assert.equal(imgDec.realHeight, 10);
-    assert.equal(imgDec.memUsage, (4 + 1) * 6 * 4); // (4 + 1) * 6 * 4
+    assert.deepStrictEqual(target8, source8);
+    assert.strictEqual(imgDec.width, 1);
+    assert.strictEqual(imgDec.height, 10);
+    assert.strictEqual(imgDec.realHeight, 10);
+    assert.strictEqual(imgDec.memUsage, (4 + 1) * 6 * 4); // (4 + 1) * 6 * 4
   });
   it('10x1 with 8 colors', () => {
     // prepare data
@@ -70,9 +70,9 @@ describe('encode - decode cycles', () => {
     imgDec.decodeString(sixels);
     imgDec.toPixelData(target8.subarray(0, 8 * 4), 8, 1);
     // compare
-    assert.deepEqual(target8, source8);
-    assert.equal(imgDec.width, 8);
-    assert.equal(imgDec.height, 1);
+    assert.deepStrictEqual(target8, source8);
+    assert.strictEqual(imgDec.width, 8);
+    assert.strictEqual(imgDec.height, 1);
   });
   it('100x100 with 256 random colors (noise)', () => {
     // prepare data
@@ -100,15 +100,15 @@ describe('encode - decode cycles', () => {
     // encode
     const sixels = sixelEncode(source8, 100, 100, palette);
     // decode
-    const imgDec = new SixelDecoder();
+    const imgDec = new SixelDecoder(0);
     imgDec.decodeString(sixels);
     imgDec.toPixelData(target8, 100, 100);
     // compare
-    assert.deepEqual(target8, source8);
-    assert.equal(imgDec.width, 100);
-    assert.equal(imgDec.height, 100);
+    assert.deepStrictEqual(target8, source8);
+    assert.strictEqual(imgDec.width, 100);
+    assert.strictEqual(imgDec.height, 100);
     // 4 --> 8 --> 16 --> 32 --> 64 --> 128 * 6 * 4
     // + 16 * 100 * 6 * 4
-    assert.equal(imgDec.memUsage, 128 * 6 * 4 + 16 * 100 * 6 * 4);
+    assert.strictEqual(imgDec.memUsage, 128 * 6 * 4 + 16 * 100 * 6 * 4);
   });
 });

@@ -6,24 +6,30 @@
 import { RGBA8888, RGBColor } from './Types';
 
 
+// FIXME: cleanup this mess, move things either to decoder/encoder, keep only shared things
+
+
 // system endianess
 export const BIG_ENDIAN = new Uint8Array(new Uint32Array([0xFF000000]).buffer)[0] === 0xFF;
+if (BIG_ENDIAN) {
+  console.warn('BE platform detected. This version of node-sixel works only on LE properly.');
+}
 
 // channel values
 export function red(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n >>> 24 : n) & 0xFF;
+  return n & 0xFF;
 }
 
 export function green(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n >>> 16 : n >>> 8) & 0xFF;
+  return (n >>> 8) & 0xFF;
 }
 
 export function blue(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n >>> 8 : n >>> 16) & 0xFF;
+  return (n >>> 16) & 0xFF;
 }
 
 export function alpha(n: RGBA8888): number {
-  return (BIG_ENDIAN ? n : n >>> 24) & 0xFF;
+  return (n >>> 24) & 0xFF;
 }
 
 
@@ -31,19 +37,15 @@ export function alpha(n: RGBA8888): number {
  * Convert RGB channels to native color RGBA8888.
  */
 export function toRGBA8888(r: number, g: number, b: number, a: number = 255): RGBA8888 {
-  return (BIG_ENDIAN)
-    ? ((r & 0xFF) << 24 | (g & 0xFF) << 16 | (b % 0xFF) << 8 | (a & 0xFF)) >>> 0    // RGBA32
-    : ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
+  return ((a & 0xFF) << 24 | (b & 0xFF) << 16 | (g & 0xFF) << 8 | (r & 0xFF)) >>> 0;   // ABGR32
 }
 
 
 /**
- * Convert native color to [r, g, b].
+ * Convert native color to [r, g, b, a].
  */
 export function fromRGBA8888(color: RGBA8888): [number, number, number, number] {
-  return (BIG_ENDIAN)
-    ? [color >>> 24, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF]
-    : [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >>> 24];
+  return [color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF, color >>> 24];
 }
 
 
@@ -77,43 +79,43 @@ export function nearestColorIndex(color: RGBA8888, palette: RGBColor[]): number 
 
 
 // color conversions
-function hue2rgb(p: number, q: number, t: number): number {
-  if (t < 0) t += 1;
-  if (t > 1) t -= 1;
-  if (t < 1 / 6) return p + (q - p) * 6 * t;
-  if (t < 1 / 2) return q;
-  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-  return p;
+// HLS taken from: http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl
+
+function clamp(low: number, high: number, value: number): number {
+  return Math.max(low, Math.min(value, high));
 }
 
-function hlsToRgb(h: number, l: number, s: number): RGBA8888 {
-  let r;
-  let g;
-  let b;
+function h2c(t1: number, t2: number, c: number): number {
+  if (c < 0) c += 1;
+  if (c > 1) c -= 1;
+  return c * 6 < 1
+    ? t2 + (t1 - t2) * 6 * c
+    : c * 2 < 1
+      ? t1
+      : c * 3 < 2
+        ? t2 + (t1 - t2) * (4 - c * 6)
+        : t2;
+}
 
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
+function HLStoRGB(h: number, l: number, s: number): RGBA8888 {
+  if (!s) {
+    const v = Math.round(l * 255);
+    return toRGBA8888(v, v, v);
   }
-
-  return (BIG_ENDIAN)
-    ? (Math.round(r * 255) << 24 | Math.round(g * 255) << 16 | Math.round(b * 255) << 8 | 0xFF) >>> 0   // RGBA32
-    : (0xFF000000 | Math.round(b * 255) << 16 | Math.round(g * 255) << 8 | Math.round(r * 255)) >>> 0;  // ABGR32
+  const t1 = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const t2 = 2 * l - t1;
+  return toRGBA8888(
+    clamp(0, 255, Math.round(h2c(t1, t2, h + 1 / 3) * 255)),
+    clamp(0, 255, Math.round(h2c(t1, t2, h) * 255)),
+    clamp(0, 255, Math.round(h2c(t1, t2, h - 1 / 3) * 255))
+  );
 }
-
 
 /**
  * Normalize SIXEL RGB values (percent based, 0-100) to RGBA8888.
  */
 export function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
-  return (BIG_ENDIAN)
-    ? (Math.round(r / 100 * 255) << 24 | Math.round(g / 100 * 255) << 16 | Math.round(b / 100 * 255) << 8 | 0xFF) >>> 0   // RGBA32
-    : (0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255)) >>> 0;  // ABGR32
+  return (0xFF000000 | Math.round(b / 100 * 255) << 16 | Math.round(g / 100 * 255) << 8 | Math.round(r / 100 * 255)) >>> 0;  // ABGR32
 }
 
 
@@ -121,14 +123,16 @@ export function normalizeRGB(r: number, g: number, b: number): RGBA8888 {
  * Normalize SIXEL HLS values to RGBA8888. Applies hue correction of +240°.
  */
 export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
-  // Note: hue value is turned by 240° in VT340
-  return hlsToRgb((h + 240) / 360 - 1, l / 100, s / 100);
+  // Note: hue value is turned by 240° in VT340, all values given as fractions
+  return HLStoRGB((h + 240 % 360) / 360, l / 100, s / 100);
 }
 
 
 /**
  * default palettes
  */
+
+// FIXME: move palettes to Decoder.ts
 
 /**
  * 16 predefined color registers of VT340 (values in %):
@@ -155,7 +159,7 @@ export function normalizeHLS(h: number, l: number, s: number): RGBA8888 {
  *
  * @see https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
 */
-export const PALETTE_VT340_COLOR = [
+export const PALETTE_VT340_COLOR = new Uint32Array([
   normalizeRGB( 0,  0,  0),
   normalizeRGB(20, 20, 80),
   normalizeRGB(80, 13, 13),
@@ -172,7 +176,7 @@ export const PALETTE_VT340_COLOR = [
   normalizeRGB(33, 60, 60),
   normalizeRGB(60, 60, 33),
   normalizeRGB(80, 80, 80)
-];
+]);
 
 /**
  * 16 predefined monochrome registers of VT340 (values in %):
@@ -198,7 +202,7 @@ export const PALETTE_VT340_COLOR = [
  *
  * @see https://vt100.net/docs/vt3xx-gp/chapter2.html#S2.4
  */
-export const PALETTE_VT340_GREY = [
+export const PALETTE_VT340_GREY = new Uint32Array([
   normalizeRGB( 0,  0,  0),
   normalizeRGB(13, 13, 13),
   normalizeRGB(26, 26, 26),
@@ -215,7 +219,7 @@ export const PALETTE_VT340_GREY = [
   normalizeRGB(20, 20, 20),
   normalizeRGB(33, 33, 33),
   normalizeRGB(46, 46, 46)
-];
+]);
 
 /**
  * 256 predefined ANSI colors.
@@ -255,12 +259,15 @@ export const PALETTE_ANSI_256 = (() => {
   for (let v = 8; v <= 238; v += 10) {
     p.push(toRGBA8888(v, v, v));
   }
-  return p;
+  return new Uint32Array(p);
 })();
 
 /**
- * Black by default.
+ * Background: Black by default.
+ * Foreground: White by default.
  *
- * Used whenever a background or fill color is needed and not explicitly set.
+ * Background color is used whenever a fill color is needed and not explicitly set.
+ * Foreground color is used as default initial sixel color.
  */
 export const DEFAULT_BACKGROUND: RGBA8888 = toRGBA8888(0, 0, 0, 255);
+export const DEFAULT_FOREGROUND: RGBA8888 = toRGBA8888(255, 255, 255, 255);
