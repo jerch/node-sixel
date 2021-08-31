@@ -144,37 +144,35 @@ Results:
    Context "./lib/index.benchmark.js"
       Context "testimage"
          Context "pixel transfer"
-            Case "toPixelData - with fillColor" : 20 runs - average runtime: 1.38 ms
-            Case "toPixelData - without fillColor" : 20 runs - average runtime: 1.06 ms
+            Case "toPixelData - with fillColor" : 20 runs - average runtime: 1.48 ms
+            Case "toPixelData - without fillColor" : 20 runs - average runtime: 0.87 ms
          Context "decode (DefaultDecoder)"
-            Case "decode" : 20 runs - average runtime: 4.15 ms
-            Case "decodeString" : 20 runs - average runtime: 5.18 ms
-            Case "decode + pixel transfer" : 20 runs - average runtime: 3.17 ms
+            Case "decode" : 20 runs - average runtime: 3.83 ms
+            Case "decodeString" : 20 runs - average runtime: 4.11 ms
+            Case "decode + pixel transfer" : 20 runs - average runtime: 3.09 ms
          Context "decode (WasmDecoder)"
-            Case "decode" : 20 runs - average runtime: 1.27 ms
-            Case "decodeString" : 20 runs - average runtime: 1.66 ms
+            Case "decode" : 20 runs - average runtime: 0.76 ms
+            Case "decodeString" : 20 runs - average runtime: 1.48 ms
          Context "encode"
-            Case "sixelEncode" : 20 runs - average runtime: 22.23 ms
-      Context "decode - testfiles (SixelDecoder - old decoder)"
-         Case "test1_clean.sixel" : 20 runs - average runtime: 15.64 ms
-         Case "test1_clean.sixel" : 20 runs - average throughput: 41.48 MB/s
-         Case "test2_clean.sixel" : 20 runs - average runtime: 6.53 ms
-         Case "test2_clean.sixel" : 20 runs - average throughput: 48.90 MB/s
-         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 15.23 ms
-         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 42.46 MB/s
-         Case "FullHD 12bit noise" : 20 runs - average runtime: 215.23 ms
-         Case "FullHD 12bit noise" : 20 runs - average throughput: 72.03 MB/s
-      Context "decode - testfiles (Decoder - new decoder)"
-         Case "test1_clean.sixel" : 20 runs - average runtime: 4.30 ms
-         Case "test1_clean.sixel" : 20 runs - average throughput: 138.79 MB/s
-         Case "test2_clean.sixel" : 20 runs - average runtime: 2.25 ms
-         Case "test2_clean.sixel" : 20 runs - average throughput: 140.65 MB/s
-         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 4.40 ms
-         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 147.16 MB/s
-         Case "FullHD 12bit noise" : 20 runs - average runtime: 48.82 ms
-         Case "FullHD 12bit noise" : 20 runs - average throughput: 317.88 MB/s
-         Case "640x480 9bit tiles" : 20 runs - average runtime: 0.65 ms
-         Case "640x480 9bit tiles" : 20 runs - average throughput: 154.89 MB/s
+            Case "sixelEncode" : 20 runs - average runtime: 21.57 ms
+      Context "decode - testfiles (DefaultDecoder)"
+         Case "test1_clean.sixel" : 20 runs - average runtime: 16.20 ms
+         Case "test1_clean.sixel" : 20 runs - average throughput: 38.57 MB/s
+         Case "test2_clean.sixel" : 20 runs - average runtime: 6.49 ms
+         Case "test2_clean.sixel" : 20 runs - average throughput: 48.75 MB/s
+         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 15.76 ms
+         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 40.98 MB/s
+         Case "FullHD 12bit noise" : 20 runs - average runtime: 224.61 ms
+         Case "FullHD 12bit noise" : 20 runs - average throughput: 69.03 MB/s
+      Context "decode - testfiles (WasmDecoder)"
+         Case "test1_clean.sixel" : 20 runs - average runtime: 3.89 ms
+         Case "test1_clean.sixel" : 20 runs - average throughput: 152.63 MB/s
+         Case "test2_clean.sixel" : 20 runs - average runtime: 1.91 ms
+         Case "test2_clean.sixel" : 20 runs - average throughput: 165.01 MB/s
+         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 4.47 ms
+         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 146.42 MB/s
+         Case "FullHD 12bit noise" : 20 runs - average runtime: 48.53 ms
+         Case "FullHD 12bit noise" : 20 runs - average throughput: 319.51 MB/s
 ```
 Note that the new decoder is roughly 3-4 times faster than the old one. Therefore the old decoder will be removed with one of the next releases.
 
