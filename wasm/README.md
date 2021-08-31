@@ -1,6 +1,7 @@
 
 ## Sixel band decoder
 
+
 __Features__:
 - written in C
 - allocation free (single instance static memory)
@@ -153,6 +154,6 @@ There are probably more deviations from the SIXEL spec not listed here.
 - undecided: establish some real height accounting for M1
   
 
-### State
+### Status
 
-Alpha, still way to go.
+Beta. The code is tested with unit/regression tests from the JS integration.
