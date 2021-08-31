@@ -19,3 +19,10 @@ img2sixel.js
 lib-esm
 emsdk
 bin
+.github
+examples
+src
+wasm
+tsconfig.esm.json
+tsconfig.json
+tslint.json
