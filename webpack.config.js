@@ -1,28 +1,5 @@
 const path = require('path');
 
-
-// FIXME: to be removed when done with decode|encode|full bundle
-const test_bundle = {
-  entry: './src/index.ts',
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/
-      }
-    ]
-  },
-  resolve: {
-    extensions: [ '.tsx', '.ts', '.js' ]
-  },
-  output: {
-    filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist'),
-    library: ['sixel']
-  }
-};
-
 const full_esm = {
   entry: `./lib-esm/index.js`,
   devtool: 'source-map',
@@ -161,4 +138,8 @@ const encode_umd = {
   mode: 'production'
 };
 
-module.exports = [test_bundle, full_esm, full_umd, decode_esm, decode_umd, encode_esm, encode_umd];
+module.exports = [
+  full_esm, full_umd,
+  decode_esm, decode_umd,
+  encode_esm, encode_umd
+];

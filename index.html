@@ -35,110 +35,30 @@
   <br><br>
   <label><input type="checkbox" name="slow" id="slow" value="value"> Simulate slow chunks</label>
   <br>
-  <label><input type="color" name="fillColor" id="fillColor" value="#000000" onchange="redraw()"> background color</label>
-  <br>
-  <label><input type="number" name="dx" id="dx" value="0" onchange="redraw()"> dx</label>
-  <br>
-  <label><input type="number" name="dy" id="dy" value="0" onchange="redraw()"> dy</label>
-  <br>
-  <label><input type="number" name="sx" id="sx" value="0" onchange="redraw()"> sx</label>
-  <br>
-  <label><input type="number" name="sy" id="sy" value="0" onchange="redraw()"> sy</label>
-  <br>
-  <label><input type="number" name="swidth" id="swidth" value="0" onchange="redraw()"> swidth</label>
-  <br>
-  <label><input type="number" name="sheight" id="sheight" value="0" onchange="redraw()"> sheight</label>
+  <label><input type="color" name="fillColor" id="fillColor" value="#000000"> background color</label>
   <br><br>
   <span id="stats"></span>
   <br><br>
-  Default decoder:<br>
-  <canvas id="output" style="border: 1px solid black"></canvas>
-  <br><br>
-  L2 decoder (wasm):<br>
   <canvas id="output_wasm" style="border: 1px solid black"></canvas>
-  <br><br>
-  Reencoded with img2sixel:<br>
-  <canvas id="output2" style="border: 1px solid black"></canvas>
-  <script src="/dist/bundle.js"></script>
-  
-  <script id="sampsa" type="application/json"></script>
+  <script src="/dist/full.umd.js"></script>
   <script>
 
 let drawHandle = null;
-let imgS = null;
-let imgWasm = null;
-let wasmDecoder = null;
-sixel.DecoderAsync().then(dec => wasmDecoder = dec);
+let decoder = null;
+sixel.DecoderAsync().then(dec => decoder = dec);
 
 function drawImageWasm() {
-  const data = wasmDecoder.data32;
-  const width = wasmDecoder.width;
-  const height = wasmDecoder.height;
-  if (!height || !width) {
+  if (!decoder.height || !decoder.width) {
     return;
   }
   const canvas = document.getElementById('output_wasm');
   const ctx = canvas.getContext('2d');
   // resize canvas to show full image
-  canvas.width = width;
-  canvas.height = height;
-  const target = new ImageData(width, height);
-  new Uint32Array(target.data.buffer).set(data);
+  canvas.width = decoder.width;
+  canvas.height = decoder.height;
+  const target = new ImageData(decoder.width, decoder.height);
+  new Uint32Array(target.data.buffer).set(decoder.data32);
   ctx.putImageData(target, 0, 0);
-}
-
-/**
- * example how to get the img data
- */
-function drawImage(img) {
-  if (!img.height || !img.width) {
-    return;
-  }
-  const canvas = document.getElementById('output');
-  const ctx = canvas.getContext('2d');
-  // resize canvas to show full image
-  canvas.width = img.width;
-  canvas.height = img.height;
-  // grab imagedata
-  // const target = ctx.getImageData(0, 0, img.width, img.height);
-  const target = new ImageData(img.width, img.height);
-  img.toPixelData(
-    // target metrics
-    target.data, img.width, img.height,
-    // dx, dy
-    parseInt(document.getElementById('dx').value), parseInt(document.getElementById('dy').value),
-    // sx, sy,
-    parseInt(document.getElementById('sx').value), parseInt(document.getElementById('sy').value),
-    // width, height
-    parseInt(document.getElementById('swidth').value), parseInt(document.getElementById('sheight').value),
-    // fill color
-    sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
-  ctx.putImageData(target, 0, 0);
-
-  // test encoding by re-encoding the output above
-  //const reEncoded = sixel.image2sixel(target.data, img.width, img.height);
-  //const dim = new sixel.DimensionDecoder().decodeString(reEncoded.slice(7, -2));
-  //if (sixel.canUseWasm(dim.width, dim.height, 4096)) {
-  //  wasmDecoder.init(dim.width, dim.height, 0)  
-  //  wasmDecoder.decodeString(reEncoded.slice(7, -2));
-  //  const canvas2 = document.getElementById('output2');
-  //  canvas2.width = dim.width;
-  //  canvas2.height = dim.height;
-  //  const ctx2 = canvas2.getContext('2d');
-  //  const target2 = ctx.getImageData(0, 0, dim.width, dim.height);
-  //  new Uint32Array(target2.data.buffer).set(wasmDecoder.data32);
-  //  ctx2.putImageData(target2, 0, 0);
-  //} else {
-  //  const six2 = new sixel.SixelDecoder();
-  //  six2.decodeString(reEncoded.slice(7, -2)); // strip off enclosing escape sequence
-  //  const canvas2 = document.getElementById('output2');
-  //  canvas2.width = six2.width;
-  //  canvas2.height = six2.height;
-  //  const ctx2 = canvas2.getContext('2d');
-  //  const target2 = ctx.getImageData(0, 0, six2.width, six2.height);
-  //  six2.toPixelData(target2.data, six2.width, six2.height);
-  //  ctx2.putImageData(target2, 0, 0);
-  //}
 }
 
 function hexColorToRGB(color) {
@@ -151,92 +71,40 @@ function hexColorToRGB(color) {
   ]
 }
 
-function redraw() {
-  if (imgS) drawImage(imgS);
-}
-  
 async function setImage(s) {
   clearInterval(drawHandle);
 
-  // create image
-  const img = new sixel.SixelDecoder();
-  wasmDecoder.init(sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
-  imgS = img;
+  // initialize decoder
+  decoder.init(sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
 
   // read in
-  let start;
   if (s === 'wiki') {
-    start = new Date();
-            img.decodeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??$-#1!14!14!14A');
-    wasmDecoder.decodeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??$-#1!42A');
+    decoder.decodeString('#0;2;0;0;0#1;2;100;100;0#2;2;0;100;0#1~~@@vv@@~~@@~~~~@@vv@@~~@@~~~~@@vv@@~~@@~~$#2??}}GG}}??}}????}}GG}}??}}????}}GG}}??}}??$-#1!42A');
   } else {
     const response = await fetch('/testfiles/' + s);
     const bytes = new Uint8Array(await response.arrayBuffer());
-    //decodeWasm(bytes);
-    start = new Date();
     if (document.getElementById('slow').checked) {
-      let localHandle = drawHandle = setInterval(() => {
-        drawImage(img);
-        drawImageWasm();
-      }, 100);
+      let localHandle = drawHandle = setInterval(() => drawImageWasm(), 100);
       let i = 0;
       const endTens = bytes.length - (bytes.length % 10);
       while (i < endTens) {
         if (drawHandle !== localHandle) return;
-        img.decode(bytes, i, i + 10);
-        wasmDecoder.decode(bytes, i, i + 10);
-        document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
-        document.getElementById('swidth').value = img.width;
-        document.getElementById('sheight').value = img.height;
+        decoder.decode(bytes, i, i + 10);
+        document.getElementById('stats').innerText = 'width: ' + decoder.width + '\nheight: ' + decoder.height;
         await new Promise(resolve => setTimeout(resolve, 1));
         i += 10;
       }
       if (bytes.length % 10) {
-        img.decode(bytes, endTens, bytes.length);
-        wasmDecoder.decode(bytes, endTens, bytes.length);
-        //decodeWasm(bytes.subarray(endTens, endTens + bytes.length));
+        decoder.decode(bytes, endTens, bytes.length);
       }
       clearInterval(drawHandle);
     } else {
-      img.decode(bytes);
-      //decodeWasm(bytes);
-      wasmDecoder.decode(bytes);
-
-      //import('/dist/decode.es6.js').then(m => m.sixelDecodeAsync(bytes)).then(r => {
-      ////sixel_new.sixelDecodeAsync(bytes).then(r => {
-      //  console.log(r);
-      //  const data = r.data32;
-      //  const width = r.width;
-      //  const height = r.height;
-      //  if (!height || !width) {
-      //    return;
-      //  }
-      //  const canvas = document.getElementById('output_wasm');
-      //  const ctx = canvas.getContext('2d');
-      //  // resize canvas to show full image
-      //  canvas.width = width;
-      //  canvas.height = height;
-      //  const target = new ImageData(width, height);
-      //  new Uint32Array(target.data.buffer).set(data);
-      //  ctx.putImageData(target, 0, 0);
-      //});
+      decoder.decode(bytes);
     }
   }
-  document.getElementById('stats').innerText = 'width: ' + img.width + '\nheight: ' + img.height;
-  document.getElementById('swidth').value = img.width;
-  document.getElementById('sheight').value = img.height;
-
-
-  console.log('read & conversion time', (new Date()) - start);
-
-  // output
-  start = new Date();
-  drawImage(img);
+  document.getElementById('stats').innerText = 'width: ' + decoder.width + '\nheight: ' + decoder.height;
   drawImageWasm();
-  console.log('output to canvas time', (new Date()) - start);
 }
-
-
   </script>
 </body>
 </html>
