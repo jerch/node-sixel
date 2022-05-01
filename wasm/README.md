@@ -147,13 +147,6 @@ Needed callbacks:
 There are probably more deviations from the SIXEL spec not listed here.
 
 
-### Open issues:
-- to be fixed: '!0' will not output any pixels or advance the cursor, while it should equal to
-  a repeat count of 1.
-- undecided: true shared palette mode for terminals
-- undecided: establish some real height accounting for M1
-  
-
 ### Status
 
 Beta. The code is tested with unit/regression tests from the JS integration.

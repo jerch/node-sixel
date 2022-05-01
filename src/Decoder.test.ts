@@ -456,6 +456,54 @@ describe('WasmDecoder', () => {
       assert.deepStrictEqual(dec.getPixels(4), new Uint32Array(LIMITS.MAX_WIDTH));
       assert.deepStrictEqual(dec.getPixels(5), new Uint32Array(LIMITS.MAX_WIDTH));
     });
+    describe('repeat count - edge cases', () => {
+      it('!<sixel> counted as 1', () => {
+        // !... default to 1
+        const sixelColor = 255;
+        const fillColor = 0;
+        // single
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!@');
+        assert.strictEqual(dec.w.current_width(), 1);
+        // multiple
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!@!A!?!g!~');
+        assert.strictEqual(dec.w.current_width(), 5);
+        // M2
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('"1;1;20;10!@!A!?!g!~');
+        assert.strictEqual(dec.state[17]-4, 5); // [17](cursor) - 4(padding offset)
+      });
+      it('!0<sixel> counted as 1', () => {
+        // !... default to 1
+        const sixelColor = 255;
+        const fillColor = 0;
+        // single
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!0@');
+        assert.strictEqual(dec.w.current_width(), 1);
+        // multiple
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!0@!0A!0?!0g!000~');
+        assert.strictEqual(dec.w.current_width(), 5);
+        // M2
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('"1;1;20;10!0@!0A!0?!0g!000~');
+        assert.strictEqual(dec.state[17]-4, 5); // [17](cursor) - 4(padding offset)
+      });
+      it('!<non-sixel> ignored', () => {
+        // !... default to 1
+        const sixelColor = 255;
+        const fillColor = 0;
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!-!$!#@@@');
+        assert.strictEqual(dec.w.current_width(), 3);
+        // M2
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('"1;1;20;10!-!$!#@@@');
+        assert.strictEqual(dec.state[17]-4, 3);
+      });
+    });
   });
   describe('callbacks', () => {
     it('mode_parsed', () => {

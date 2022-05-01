@@ -286,9 +286,10 @@ void decode_m1(int start, int end) {
     if (unsigned(code - 63) < 64) {
       if (state != ST_DATA) {
         if (state == ST_COMPRESSION) {
-          while (cur + ps.params[0] >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();
-          put(code - 63, color, ps.params[0], cur);
-          cur += ps.params[0];
+          int k = ps.params[0] ? ps.params[0] : 1;
+          while (cur + k >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();
+          put(code - 63, color, k, cur);
+          cur += k;
           code = *c++ & 0x7F;
         } else {
           color = apply_color(color);
@@ -366,8 +367,9 @@ void decode_m2(int start, int end) {
     if (unsigned(code - 63) < 64) {
       if (state != ST_DATA) {
         if (state == ST_COMPRESSION) {
-          put(code - 63, color, ps.params[0], cur);
-          cur += ps.params[0];
+          int k = ps.params[0] ? ps.params[0] : 1;
+          put(code - 63, color, k, cur);
+          cur += k;
           code = *c++ & 0x7F;
         } else {
           color = apply_color(color);
