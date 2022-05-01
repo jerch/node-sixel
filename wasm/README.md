@@ -109,12 +109,12 @@ Needed callbacks:
 ### Note on SIXEL handling
 
 - The data to be digested by this decoder should only be the "Picture Definition" part of a SIXEL
-  escape sequence, as denoted by the spec. Any other data byond that is likely to screw up
+  escape sequence, as denoted by the spec. Any other data beyond that is likely to screw up
   the image creation. In particular this means, that the decoder should run behind
   a terminal escape sequence, that is capable of proper DEC style DCS parsing
   (also handling spurious ESC, SUB and C1 codes).
 - Raster or pixel ratio definitions are not dealt with beside width and height (if `truncate` is set).
-  Raster attributes are exposed unmodified in 0 .. 2^31-1 (mirrored as read from data),
+  Raster attributes are exposed unmodified in 0 .. 2^31-1 (as read from data),
   and can be used to postprocess pixel data as needed.
 - With `truncate` set in `init`, the decoder will truncate the image to given raster dimensions.
   This does not apply to level 1 images without any raster attributes. While truncation to
@@ -125,23 +125,18 @@ Needed callbacks:
   (pixel height of a sixel band). Furthermore in this mode the height is not limited by any means,
   thus decoding may run forever. Use some sort of accounting during `handle_band` to spot
   malformed data or excessive memory usage, especially when dealing with data streams.
-- Sixels are translated to a color value immediately, there is currently no palette-indexed mode.
-  While this is in line with the spec, it does not allow to mimick older terminals with their
-  shared palette idea. (There is an open issue for this, still unsure whether to implement that
-  inferior mode.)
+- Palette colors are applied immediately to sixels (printer mode), there is no terminal-like indexed mode.
+  While this is in line with the spec, it does not allow to mimick the palette behavior of older terminals
+  (e.g. palette animations are not possible).
 - The decoder unconditionally strips the 8th bit, mapping all data bytes in 7-bit space.
   While the spec defines this only as error recovery strategy for GR codes, the decoder also does this
   for C1, which might lead to sixel command interpretation from spurious C1 codes. Note that C1
   never should appear in sixel data, if used behind a proper escape sequence parser.
 - Other than stated in the spec, the decoder does not error on low C0 codes, instead silently ignores them.
   Again a proper escape sequence parser will filter / act upon those.
-- In a previous version, sixel repeat was allowed to stack, e.g. '!200!200a' would be equivalent
-  to '!400a'. This not the case anymore, as the spec states, that a start of a sixel command will
-  cancel a pending repeat count. Note that this not in line with VT240 behavior (used to create
-  stacking repeats like '!255!255...').
 - The repeat count gets not limited/clamped to 32767. The digits are parsed in signed int32 for
   performance reasons, and converted to unsigned before used as repeat count. While the counter
-  will show weird behavior above 2^31-1 (counting backwards), it should not possible to overflow
+  will show weird behavior above 2^31-1 (counting backwards), it should not be possible to overflow
   the pixel arrays with malicious data (separately tested against `MAX_WIDTH` before any painting).
 
 There are probably more deviations from the SIXEL spec not listed here.
