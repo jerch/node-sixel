@@ -785,7 +785,7 @@ describe('Decoder', () => {
       assert.strictEqual((dec as any)._wasm.current_width(), 0);
     });
   });
-  describe('decode, properties & data32', () => {
+  describe('decode, properties & data8/32', () => {
     describe('mode settlement', () => {
       it('lvl 1 image --> M1', () => {
         const dec = new Decoder();
@@ -968,6 +968,23 @@ describe('Decoder', () => {
         dec2.decode(container);
       }
       assert.deepStrictEqual(dec2.data32, dec1.data32);
+    });
+    it('data8/32 access', () => {
+      const data = fs.readFileSync('./testfiles/test1_clean.sixel');
+      const dec = new Decoder();
+      dec.init(0, null, 256);
+      dec.decode(data);
+      const data32 = dec.data32;
+      const data8 = dec.data8;
+      assert.strictEqual(data8.length, data32.length * 4);
+      for (let i = 0; i < data32.length; ++i) {
+        const v1 = data32[i];
+        const v2 = Array.from(data8.slice(i*4, i*4+4)) as [number, number, number, number];
+        assert.strictEqual(toRGBA8888(...v2), v1);
+      }
+      // from empty data32
+      dec.init(0, null, 256);
+      assert.strictEqual(dec.data8.length, 0);
     });
   });
   describe('release', () => {

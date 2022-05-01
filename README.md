@@ -50,6 +50,10 @@ It exposes the following properties:
     Getter of the pixel data as 32-bit data (RGBA8888). The pixel array will always be sized as full image of the currently reported `width` and `height` dimensions (with `fillColor` applied). Note that the array is only borrowed in most cases and you may want to copy it before doing further processing.  
     It is possible to grab the pixels of partially transmitted images during chunk decoding. Here image dimensions may not be final yet and keep shifting until all data was processed.
 
+- `data8: Uint8ClampedArray`  
+    Getter of the pixel data as 8-bit channel array, e.g. for direct usage at the `ImageData` constructor.
+    The getter refers internally to `data32`, thus exhibits the same dimension and borrow mechanics.
+
 - `width: number` 
     Reports the current width of the current image. For `truncate=true` this may report the raster width, if a valid raster attribute was found. Otherwise reports rightmost band cursor advance seen so far. 
 

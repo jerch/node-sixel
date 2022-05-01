@@ -90,6 +90,7 @@ export interface IDecodeResult {
   width: number;
   height: number;
   data32: Uint32Array;
+  data8: Uint8ClampedArray;
 }
 
 export interface IDecoderProperties {

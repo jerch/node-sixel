@@ -433,6 +433,14 @@ export class Decoder {
   }
 
   /**
+   * Same as `data32`, but returning pixel data as Uint8ClampedArray suitable
+   * for direct usage with `ImageData`.
+   */
+  public get data8(): Uint8ClampedArray {
+    return new Uint8ClampedArray(this.data32.buffer, 0, this.width * this.height * 4);
+  }
+
+  /**
    * Release image ressources on JS side held by the decoder.
    *
    * The decoder tries to re-use memory ressources of a previous image
@@ -478,7 +486,12 @@ export class Decoder {
   const dec = new Decoder(opts);
   dec.init();
   typeof data === 'string' ? dec.decodeString(data) : dec.decode(data);
-  return { width: dec.width, height: dec.height, data32: dec.data32 };
+  return {
+    width: dec.width,
+    height: dec.height,
+    data32: dec.data32,
+    data8: dec.data8
+  };
 }
 
 /**
@@ -493,5 +506,10 @@ export async function decodeAsync(
   const dec = await DecoderAsync(opts);
   dec.init();
   typeof data === 'string' ? dec.decodeString(data) : dec.decode(data);
-  return { width: dec.width, height: dec.height, data32: dec.data32 };
+  return {
+    width: dec.width,
+    height: dec.height,
+    data32: dec.data32,
+    data8: dec.data8
+  };
 }
