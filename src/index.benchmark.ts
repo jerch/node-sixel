@@ -4,7 +4,7 @@
  */
 
 import { RuntimeCase, perfContext, before, ThroughputRuntimeCase } from 'xterm-benchmark';
-import { toRGBA8888, SixelDecoder, introducer, FINALIZER, sixelEncode } from './index';
+import { toRGBA8888, introducer, FINALIZER, sixelEncode } from './index';
 import * as fs from 'fs';
 import { RGBA8888 } from './Types';
 import { Decoder } from './Decoder';
@@ -48,64 +48,10 @@ const { SOURCE32, SOURCE8, PALETTE, SIXELSTRING, SIXELBYTES } = (() => {
 })();
 const TARGET = new Uint8ClampedArray(512 * 10 * 10 * 6 * 4);
 
-// preview test image
-function preview(dec: SixelDecoder): void {
-  const { createCanvas, createImageData } = require('canvas');
-  const fs = require('fs');
-  const open = require('open');
-  const width = dec.width;
-  const height = dec.height;
-  const imageData = createImageData(width, height);
-  dec.toPixelData(imageData.data, width, height);
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-  ctx.putImageData(imageData, 0, 0);
-  const targetFile = __dirname + '/testimage.png';
-  const out = fs.createWriteStream(targetFile);
-  const stream = canvas.createPNGStream();
-  stream.pipe(out);
-  out.on('finish', () => open(targetFile));
-}
-
-// preview in terminal
-function previewTerminal(sixels: string): void {
-  console.log(introducer(1));
-  console.log(sixels);
-  console.log(FINALIZER);
-}
-
 
 perfContext('testimage', () => {
-  perfContext('pixel transfer', () => {
-    const dec = new SixelDecoder();
-    dec.decode(SIXELBYTES);
-    new RuntimeCase('toPixelData - with fillColor', () => {
-      return dec.toPixelData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, toRGBA8888(0, 0, 0));
-    }, { repeat: 20 }).showAverageRuntime();
-    new RuntimeCase('toPixelData - without fillColor', () => {
-      return dec.toPixelData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
-    }, { repeat: 20 }).showAverageRuntime();
-  });
 
-  perfContext('decode (DefaultDecoder)', () => {
-    new RuntimeCase('decode', () => {
-      const dec = new SixelDecoder();
-      dec.decode(SIXELBYTES);
-      return dec.width;
-    }, { repeat: 20 }).showAverageRuntime();
-    new RuntimeCase('decodeString', () => {
-      const dec = new SixelDecoder();
-      dec.decodeString(SIXELSTRING);
-      return dec.width;
-    }, { repeat: 20 }).showAverageRuntime();
-    new RuntimeCase('decode + pixel transfer', () => {
-      const dec = new SixelDecoder();
-      dec.decode(SIXELBYTES);
-      return dec.toPixelData(TARGET, 640, 480, 0, 0, 0, 0, 640, 480, 0);
-    }, { repeat: 20 }).showAverageRuntime();
-  });
-
-  perfContext('decode (WasmDecoder)', () => {
+  perfContext('decode', () => {
     const wasmDec = new Decoder();
     new RuntimeCase('decode', () => {
       wasmDec.init();
@@ -151,31 +97,8 @@ const SAMPSA = fs.readFileSync(__dirname + '/../testfiles/sampsa_reencoded_clean
 // fs.writeFileSync('testfiles/fullhd_12bit_noise_clean.six', NOISE_STRING);
 const NOISE = fs.readFileSync(__dirname + '/../testfiles/fullhd_12bit_noise_clean.six');
 
-perfContext('decode - testfiles (SixelDecoder)', () => {
-  new ThroughputRuntimeCase('test1_clean.sixel', () => {
-    const dec = new SixelDecoder();
-    dec.decode(TEST1);
-    return { payloadSize: TEST1.length };
-  }, { repeat: 20 }).showAverageRuntime().showAverageThroughput();
-  new ThroughputRuntimeCase('test2_clean.sixel', () => {
-    const dec = new SixelDecoder();
-    dec.decode(TEST2);
-    return { payloadSize: TEST2.length };
-  }, { repeat: 20 }).showAverageRuntime().showAverageThroughput();
-  new ThroughputRuntimeCase('sampsa_reencoded_clean.six', () => {
-    const dec = new SixelDecoder();
-    dec.decode(SAMPSA);
-    return { payloadSize: SAMPSA.length };
-  }, { repeat: 20 }).showAverageRuntime().showAverageThroughput();
-  new ThroughputRuntimeCase('FullHD 12bit noise', () => {
-    const dec = new SixelDecoder();
-    dec.decode(NOISE);
-    return { payloadSize: NOISE.length };
-  }, { repeat: 20 }).showAverageRuntime().showAverageThroughput();
-});
 
-
-perfContext('decode - testfiles (WasmDecoder)', () => {
+perfContext('decode - testfiles', () => {
   let wasmDec: Decoder;
   before(() => {
     wasmDec = new Decoder();

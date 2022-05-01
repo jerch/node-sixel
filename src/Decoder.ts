@@ -215,7 +215,7 @@ export class Decoder {
   ) {
     this._opts = Object.assign({}, DEFAULT_OPTIONS, opts);
     if (this._opts.paletteLimit > LIMITS.PALETTE_SIZE) {
-      throw new Error(`SixelDecoderOptions.paletteLimit must not exceed ${LIMITS.PALETTE_SIZE}`);
+      throw new Error(`DecoderOptions.paletteLimit must not exceed ${LIMITS.PALETTE_SIZE}`);
     }
     if (!_instance) {
       const module = WASM_MODULE || (WASM_MODULE = new WebAssembly.Module(WASM_BYTES));

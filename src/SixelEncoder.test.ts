@@ -5,9 +5,9 @@
 
 import * as assert from 'assert';
 import { introducer, FINALIZER, sixelEncode } from './SixelEncoder';
-import { SixelDecoder } from './SixelDecoder';
-import { normalizeRGB, toRGBA8888 } from './Colors';
+import { fromRGBA8888, normalizeRGB, toRGBA8888 } from './Colors';
 import { RGBA8888 } from './Types';
+import { Decoder } from './Decoder';
 
 describe('encoding', () => {
   it('DCS introducer supports P2', () => {
@@ -56,10 +56,11 @@ describe('encoding', () => {
         const sixels = sixelEncode(data, 2, 1, [[12, 34, 56], [98, 76, 54]]);
         const sixels2 = sixelEncode(data, 2, 1, [toRGBA8888(12, 34, 56), toRGBA8888(98, 76, 54)]);
         // compare with values read by decoder
-        const dec = new SixelDecoder(0, [0, 0]);
-        dec.decodeString(sixels + '-');
-        assert.deepStrictEqual(getPalFromSixel(sixels), dec.palette);
-        assert.deepStrictEqual(getPalFromSixel(sixels2), dec.palette);
+        const dec = new Decoder();
+        dec.init(0, new Uint32Array(2), 2);
+        dec.decodeString(sixels + '@');
+        assert.deepStrictEqual(new Uint32Array(getPalFromSixel(sixels)), dec.palette);
+        assert.deepStrictEqual(new Uint32Array(getPalFromSixel(sixels2)), dec.palette);
         assert.strictEqual(getPalFromSixel(sixels).length, 2);
       });
       it('should filter alpha=0 and doubles from palette', () => {
@@ -74,10 +75,12 @@ describe('encoding', () => {
           toRGBA8888(12, 34, 56)
         ]);
         // compare with values read by decoder
-        const dec = new SixelDecoder(0, [0, 0]);
-        dec.decodeString(sixels + '-');
-        assert.deepStrictEqual(getPalFromSixel(sixels), dec.palette);
-        assert.deepStrictEqual(getPalFromSixel(sixels2), dec.palette);
+        const dec = new Decoder();
+        dec.init(0, new Uint32Array(2), 2);
+
+        dec.decodeString(sixels + '@');
+        assert.deepStrictEqual(new Uint32Array(getPalFromSixel(sixels)), dec.palette);
+        assert.deepStrictEqual(new Uint32Array(getPalFromSixel(sixels2)), dec.palette);
         assert.strictEqual(getPalFromSixel(sixels).length, 2);
       });
     });

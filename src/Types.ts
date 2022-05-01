@@ -19,7 +19,7 @@
 export type RGBA8888 = number;
 
 /**
- * Unsigned typed array supported by `SixelDecoder.decode`.
+ * Unsigned typed array supported by `Decoder.decode`.
  */
 export type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
 

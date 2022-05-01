@@ -5,7 +5,8 @@ SIXEL image decoding / encoding library for node and the browser.
 
 ### Decoding
 
-For decoding the library provides a stream decoder, that can either be used directly or with the convenient functions.
+For decoding the library provides a stream decoder, that can either be used directly,
+or with the following convenient functions:
 
 - `decode(data: UintTypedArray | string, opts?: IDecoderOptions): IDecodeResult`  
     Convenient function to decode the sixel data in `data`. Can be used for casual decoding and when you have the full image data at hand (not chunked). The function is actually a thin wrapper around the decoder, and spawns a new instance for every call.  
@@ -17,9 +18,8 @@ For decoding the library provides a stream decoder, that can either be used dire
 
 #### Decoder
 
-The decoder uses webassembly for data decoding (see [/wasm](wasm/) for the webassembly parts), which gives a major performance improvement, compared to the old JS-based decoder.
-
-Properties of `Decoder`:
+The decoder uses webassembly for data decoding (see [/wasm](wasm/) for the webassembly parts).
+It exposes the following properties:
 
 - `constructor(opts?: IDecoderOptions)`  
     Creates a new decoder instance. Spawns the internal wasm part synchronously, which will work in nodejs or a web worker context, but not in the main context of all browsers. Use the promisified constructor function `DecoderAsync` there instead.  
@@ -141,40 +141,25 @@ The test image repeats the palette image 6 times to form a 640x480 image with 51
 
 Results:
 ```
-   Context "./lib/index.benchmark.js"
+   Context "lib/index.benchmark.js"
       Context "testimage"
-         Context "pixel transfer"
-            Case "toPixelData - with fillColor" : 20 runs - average runtime: 1.48 ms
-            Case "toPixelData - without fillColor" : 20 runs - average runtime: 0.87 ms
-         Context "decode (DefaultDecoder)"
-            Case "decode" : 20 runs - average runtime: 3.83 ms
-            Case "decodeString" : 20 runs - average runtime: 4.11 ms
-            Case "decode + pixel transfer" : 20 runs - average runtime: 3.09 ms
-         Context "decode (WasmDecoder)"
-            Case "decode" : 20 runs - average runtime: 0.76 ms
-            Case "decodeString" : 20 runs - average runtime: 1.48 ms
+         Context "decode"
+            Case "decode" : 20 runs - average runtime: 0.77 ms
+            Case "decodeString" : 20 runs - average runtime: 1.76 ms
          Context "encode"
-            Case "sixelEncode" : 20 runs - average runtime: 21.57 ms
-      Context "decode - testfiles (DefaultDecoder)"
-         Case "test1_clean.sixel" : 20 runs - average runtime: 16.20 ms
-         Case "test1_clean.sixel" : 20 runs - average throughput: 38.57 MB/s
-         Case "test2_clean.sixel" : 20 runs - average runtime: 6.49 ms
-         Case "test2_clean.sixel" : 20 runs - average throughput: 48.75 MB/s
-         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 15.76 ms
-         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 40.98 MB/s
-         Case "FullHD 12bit noise" : 20 runs - average runtime: 224.61 ms
-         Case "FullHD 12bit noise" : 20 runs - average throughput: 69.03 MB/s
-      Context "decode - testfiles (WasmDecoder)"
-         Case "test1_clean.sixel" : 20 runs - average runtime: 3.89 ms
-         Case "test1_clean.sixel" : 20 runs - average throughput: 152.63 MB/s
-         Case "test2_clean.sixel" : 20 runs - average runtime: 1.91 ms
-         Case "test2_clean.sixel" : 20 runs - average throughput: 165.01 MB/s
-         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 4.47 ms
-         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 146.42 MB/s
-         Case "FullHD 12bit noise" : 20 runs - average runtime: 48.53 ms
-         Case "FullHD 12bit noise" : 20 runs - average throughput: 319.51 MB/s
+            Case "sixelEncode" : 20 runs - average runtime: 21.52 ms
+      Context "decode - testfiles"
+         Case "test1_clean.sixel" : 20 runs - average runtime: 4.36 ms
+         Case "test1_clean.sixel" : 20 runs - average throughput: 144.83 MB/s
+         Case "test2_clean.sixel" : 20 runs - average runtime: 1.96 ms
+         Case "test2_clean.sixel" : 20 runs - average throughput: 161.27 MB/s
+         Case "sampsa_reencoded_clean.six" : 20 runs - average runtime: 4.36 ms
+         Case "sampsa_reencoded_clean.six" : 20 runs - average throughput: 148.78 MB/s
+         Case "FullHD 12bit noise" : 20 runs - average runtime: 50.70 ms
+         Case "FullHD 12bit noise" : 20 runs - average throughput: 306.03 MB/s
+         Case "640x480 9bit tiles" : 20 runs - average runtime: 0.68 ms
+         Case "640x480 9bit tiles" : 20 runs - average throughput: 148.33 MB/s
 ```
-Note that the new decoder is roughly 3-4 times faster than the old one. Therefore the old decoder will be removed with one of the next releases.
 
 
 ### Decoder usage
@@ -184,10 +169,10 @@ you can use the convenient functions `decode` or `decodeAsync`.
 
 _Example (Typescript):_
 ```typescript
-import { decode, decodeAsync, ISixelDecoderOptions } from 'sixel';
+import { decode, decodeAsync, IDecoderOptions } from 'sixel';
 
 // some options
-const OPTIONS: ISixelDecoderOptions = {
+const OPTIONS: IDecoderOptions = {
     memoryLimit: 65536 * 256, // limit pixel memory to 16 MB (2048 x 2048 pixels)
     ...
 };
@@ -211,10 +196,10 @@ use the stream decoder directly.
 
 _Example (Typescript):_
 ```typescript
-import { Decoder, DecoderAsync, ISixelDecoderOptions } from 'sixel';
+import { Decoder, DecoderAsync, IDecoderOptions } from 'sixel';
 
 // some options
-const OPTIONS: ISixelDecoderOptions = {
+const OPTIONS: IDecoderOptions = {
     memoryLimit: 65536 * 256, // limit pixel memory to 16 MB (2048 x 2048 pixels)
     ...
 };
@@ -222,8 +207,9 @@ const OPTIONS: ISixelDecoderOptions = {
 // in nodejs or web worker context
 const decoder = new Decoder(OPTIONS);
 // in browser main context
-const decoder = DecoderAsync(OPTIONS);
+const decoderPromise = DecoderAsync(OPTIONS).then(decoder => ...);
 
+// and later on:
 for (image of images) {
     // initialize for next image with defaults
     // for a more terminal like behavior you may want to override default settings
@@ -235,11 +221,11 @@ for (image of images) {
         decoder.decode(chunk);
         // optional: check your memory limits
         if (decoder.memoryUsage > YOUR_LIMIT) {
-        // the decoder is meant to be resilient for exceptional conditions
-        // and can be re-used after calling .release (if not, please file a bug)
-        // (for simplicity example exists whole loop)
-        decoder.release();
-        throw new Error('dont like your data, way too big');
+            // the decoder is meant to be resilient for exceptional conditions
+            // and can be re-used after calling .release (if not, please file a bug)
+            // (for simplicity example exits whole loop)
+            decoder.release();
+            throw new Error('dont like your data, way too big');
         }
         // optional: grab partial data (useful for slow transmission)
         somePartialRawImageAction(decoder.data32, decoder.width, decoder.height);
