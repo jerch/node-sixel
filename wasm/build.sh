@@ -66,6 +66,7 @@ emcc -O3 \
   "_init",
   "_decode",
   "_current_width",
+  "_current_height",
   "_get_state_address",
   "_get_chunk_address",
   "_get_p0_address",

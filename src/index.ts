@@ -2,18 +2,21 @@
  * Copyright (c) 2019, 2021 Joerg Breitbart.
  * @license MIT
  */
+
 export  {
   Decoder,
   DecoderAsync,
   decode,
   decodeAsync,
 } from './Decoder';
+
 export {
   sixelEncode,
   introducer,
   FINALIZER,
   image2sixel
 } from './SixelEncoder';
+
 export {
   toRGBA8888,
   fromRGBA8888,
@@ -23,6 +26,7 @@ export {
   DEFAULT_BACKGROUND,
   DEFAULT_FOREGROUND
 } from './Colors';
+
 export {
   IDecodeResult,
   IDecoderOptions,
@@ -30,6 +34,3 @@ export {
   RGBColor,
   UintTypedArray
 } from './Types';
-
-// to be removed
-export { SixelDecoder } from './SixelDecoder';

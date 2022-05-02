@@ -55,6 +55,7 @@ static struct {
   int abort;
   int cleared_width;
   int real_width;
+  int band_height;
   int state;
   int color;
   int cursor;
@@ -83,6 +84,7 @@ extern "C" {
   void init(int sixel_color, int fill_color, unsigned int palette_length, int truncate);
   void decode(int start, int end);
   int current_width();
+  int current_height();
 
   // imported
   int handle_band(int width);
@@ -209,6 +211,7 @@ static inline void clear_next() {
 // Clear pixel buffers for next line processing (m1). Hardcoded to 128px chunk.
 static inline void reset_line_m1() {
   ps.real_width = 4;
+  ps.band_height = 0;
 
   // fill 128 pixels in p0 as copy source
   long long *blueprint = (long long *) &ps.p0[4];
@@ -286,9 +289,11 @@ void decode_m1(int start, int end) {
     if (unsigned(code - 63) < 64) {
       if (state != ST_DATA) {
         if (state == ST_COMPRESSION) {
-          while (cur + ps.params[0] >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();
-          put(code - 63, color, ps.params[0], cur);
-          cur += ps.params[0];
+          int k = ps.params[0] ? ps.params[0] : 1;
+          while (cur + k >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();
+          put(code - 63, color, k, cur);
+          ps.band_height |= code - 63;
+          cur += k;
           code = *c++ & 0x7F;
         } else {
           color = apply_color(color);
@@ -298,6 +303,7 @@ void decode_m1(int start, int end) {
       while (unsigned(code - 63) < 64) {
         if (cur >= ps.cleared_width && ps.cleared_width < MAX_WIDTH) clear_next();  // FIXME: MAX_WIDTH is exp here
         put_single(code - 63, color, cur++);
+        ps.band_height |= code - 63;
         code = *c++ & 0x7F;
       };
     }
@@ -366,8 +372,9 @@ void decode_m2(int start, int end) {
     if (unsigned(code - 63) < 64) {
       if (state != ST_DATA) {
         if (state == ST_COMPRESSION) {
-          put(code - 63, color, ps.params[0], cur);
-          cur += ps.params[0];
+          int k = ps.params[0] ? ps.params[0] : 1;
+          put(code - 63, color, k, cur);
+          cur += k;
           code = *c++ & 0x7F;
         } else {
           color = apply_color(color);
@@ -503,6 +510,7 @@ void init(int sixel_color, int fill_color, unsigned int palette_length, int trun
   ps.r_height = 0;
   ps.width = 0;
   ps.height = 0;
+  ps.band_height = 0;
   ps.abort = 0;
 }
 
@@ -523,4 +531,10 @@ int current_width() {
     return ps.width - 4;
   }
   return 0;
+}
+
+// Height of the current band (M1 only).
+int current_height() {
+  int x = ps.band_height;
+  return x & 32 ? 6 : x & 16 ? 5 : x & 8 ? 4 : x & 4 ? 3 : x & 2 ? 2 : x & 1 ? 1 : 0;
 }

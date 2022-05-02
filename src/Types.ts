@@ -19,7 +19,7 @@
 export type RGBA8888 = number;
 
 /**
- * Unsigned typed array supported by `SixelDecoder.decode`.
+ * Unsigned typed array supported by `Decoder.decode`.
  */
 export type UintTypedArray = Uint8Array | Uint16Array | Uint32Array;
 
@@ -90,6 +90,7 @@ export interface IDecodeResult {
   width: number;
   height: number;
   data32: Uint32Array;
+  data8: Uint8ClampedArray;
 }
 
 export interface IDecoderProperties {
@@ -143,6 +144,7 @@ export interface IWasmDecoderExports extends Record<string, WebAssembly.ExportVa
   init(sixelColor: number, fillColor: number, paletteLimit: number, truncate: number): void;
   decode(start: number, end: number): void;
   current_width(): number;
+  current_height(): number;
 }
 
 // wasm decoder

@@ -105,41 +105,41 @@ describe('WasmDecoder', () => {
   describe('params handling', () => {
     it('in ST_ATTR', () => {
       dec.w.init(0, 0, 4, 0);
-      assert.strictEqual(dec.state[18], 1);     // always holds 1 params
-      assert.strictEqual(dec.state[19], 0);     // ZDM
+      assert.strictEqual(dec.state[19], 1);     // always holds 1 params
+      assert.strictEqual(dec.state[20], 0);     // ZDM
       dec.decodeString('"1;2;3;4;5;6;7;8;9;10');
-      assert.strictEqual(dec.state[18], 8);     // stops at max 8 params
-      assert.strictEqual(dec.state[19], 1);
-      assert.strictEqual(dec.state[20], 2);
-      assert.strictEqual(dec.state[26], 8910);  // but accounts all excess params at 8th
+      assert.strictEqual(dec.state[19], 8);     // stops at max 8 params
+      assert.strictEqual(dec.state[20], 1);
+      assert.strictEqual(dec.state[21], 2);
+      assert.strictEqual(dec.state[27], 8910);  // but accounts all excess params at 8th
     });
     it('in ST_COMPRESSION', () => {
       dec.w.init(0, 0, 4, 0);
-      assert.strictEqual(dec.state[18], 1);     // always holds 1 params
-      assert.strictEqual(dec.state[19], 0);     // ZDM
+      assert.strictEqual(dec.state[19], 1);     // always holds 1 params
+      assert.strictEqual(dec.state[20], 0);     // ZDM
       dec.decodeString('!1;2;3;4;5;6;7;8;9;10');
-      assert.strictEqual(dec.state[18], 8);     // stops at max 8 params
-      assert.strictEqual(dec.state[19], 1);
-      assert.strictEqual(dec.state[20], 2);
-      assert.strictEqual(dec.state[26], 8910);  // but accounts all excess params at 8th
+      assert.strictEqual(dec.state[19], 8);     // stops at max 8 params
+      assert.strictEqual(dec.state[20], 1);
+      assert.strictEqual(dec.state[21], 2);
+      assert.strictEqual(dec.state[27], 8910);  // but accounts all excess params at 8th
       // re-entering resets p[0]
       dec.decodeString('!');
-      assert.strictEqual(dec.state[18], 1);     // always holds 1 params
-      assert.strictEqual(dec.state[19], 0);     // ZDM
+      assert.strictEqual(dec.state[19], 1);     // always holds 1 params
+      assert.strictEqual(dec.state[20], 0);     // ZDM
     });
     it('in ST_COLOR', () => {
       dec.w.init(0, 0, 4, 0);
-      assert.strictEqual(dec.state[18], 1);     // always holds 1 params
-      assert.strictEqual(dec.state[19], 0);     // ZDM
+      assert.strictEqual(dec.state[19], 1);     // always holds 1 params
+      assert.strictEqual(dec.state[20], 0);     // ZDM
       dec.decodeString('#1;2;3;4;5;6;7;8;9;10');
-      assert.strictEqual(dec.state[18], 8);     // stops at max 8 params
-      assert.strictEqual(dec.state[19], 1);
-      assert.strictEqual(dec.state[20], 2);
-      assert.strictEqual(dec.state[26], 8910);  // but accounts all excess params at 8th
+      assert.strictEqual(dec.state[19], 8);     // stops at max 8 params
+      assert.strictEqual(dec.state[20], 1);
+      assert.strictEqual(dec.state[21], 2);
+      assert.strictEqual(dec.state[27], 8910);  // but accounts all excess params at 8th
       // re-entering resets p[0]
       dec.decodeString('#');
-      assert.strictEqual(dec.state[18], 1);     // always holds 1 params
-      assert.strictEqual(dec.state[19], 0);     // ZDM
+      assert.strictEqual(dec.state[19], 1);     // always holds 1 params
+      assert.strictEqual(dec.state[20], 0);     // ZDM
     });
   });
   describe('sixel state transitions', () => {
@@ -149,12 +149,12 @@ describe('WasmDecoder', () => {
     const ST_COLOR = 35;
     it('init starts in ST_DATA', () => {
       dec.w.init(0, 0, 4, 0);
-      assert.strictEqual(dec.state[15], ST_DATA);
+      assert.strictEqual(dec.state[16], ST_DATA);
       dec.decodeString('#123');
-      assert.notStrictEqual(dec.state[15], ST_DATA);
+      assert.notStrictEqual(dec.state[16], ST_DATA);
       // init should reset to ST_DATA
       dec.w.init(0, 0, 4, 0);
-      assert.strictEqual(dec.state[15], ST_DATA);
+      assert.strictEqual(dec.state[16], ST_DATA);
     });
     it('ST_DATA --> ST_COMPRESSION', () => {
       // only '!' should enter ST_COMPRESSION
@@ -162,24 +162,24 @@ describe('WasmDecoder', () => {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString(String.fromCharCode(i));
         i === 33
-          ? assert.strictEqual(dec.state[15], ST_COMPRESSION)
-          : assert.notStrictEqual(dec.state[15], ST_COMPRESSION);
+          ? assert.strictEqual(dec.state[16], ST_COMPRESSION)
+          : assert.notStrictEqual(dec.state[16], ST_COMPRESSION);
       }
       // ST_COMPRESSION should reset params
       dec.w.init(0, 0, 4, 0);
-      dec.state[18] = 999;    // p_length
-      dec.state[19] = 123456; // first param
+      dec.state[19] = 999;    // p_length
+      dec.state[20] = 123456; // first param
       dec.decodeString('!');
-      assert.strictEqual(dec.state[18], 1);
-      assert.strictEqual(dec.state[19], 0);
+      assert.strictEqual(dec.state[19], 1);
+      assert.strictEqual(dec.state[20], 0);
       // digit parsing
       dec.decodeString('123456');
-      assert.strictEqual(dec.state[18], 1);
-      assert.strictEqual(dec.state[19], 123456);
+      assert.strictEqual(dec.state[19], 1);
+      assert.strictEqual(dec.state[20], 123456);
       // re-entering compression resets repeat counter
       dec.decodeString('!99');
-      assert.strictEqual(dec.state[18], 1);
-      assert.strictEqual(dec.state[19], 99);
+      assert.strictEqual(dec.state[19], 1);
+      assert.strictEqual(dec.state[20], 99);
       // should apply pending color command (ST_COLOR --> ST_COMPRESSION)
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('#0;2;100;100;100!123');
@@ -191,33 +191,33 @@ describe('WasmDecoder', () => {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString(String.fromCharCode(i));
         i === 34
-          ? assert.strictEqual(dec.state[15], ST_ATTR)
-          : assert.notStrictEqual(dec.state[15], ST_ATTR);
+          ? assert.strictEqual(dec.state[16], ST_ATTR)
+          : assert.notStrictEqual(dec.state[16], ST_ATTR);
       }
       // ST_ATTR should reset params
       dec.w.init(0, 0, 4, 0);
       dec.state[18] = 999;    // p_length
       dec.state[19] = 123456; // first param
       dec.decodeString('"');
-      assert.strictEqual(dec.state[18], 1);
-      assert.strictEqual(dec.state[19], 0);
+      assert.strictEqual(dec.state[19], 1);
+      assert.strictEqual(dec.state[20], 0);
       // digit parsing
       dec.decodeString('12;34;56;78');
-      assert.strictEqual(dec.state[18], 4);
-      assert.strictEqual(dec.state[19], 12);
-      assert.strictEqual(dec.state[20], 34);
-      assert.strictEqual(dec.state[21], 56);
-      assert.strictEqual(dec.state[22], 78);
+      assert.strictEqual(dec.state[19], 4);
+      assert.strictEqual(dec.state[20], 12);
+      assert.strictEqual(dec.state[21], 34);
+      assert.strictEqual(dec.state[22], 56);
+      assert.strictEqual(dec.state[23], 78);
       // digit parsing with defaults (mirrors only here, thus 0 is reported as 0)
       // Note: spec says that P1 and P2 should be treated as 1 if omitted, P3/P4 unclear
       dec.w.init(0, 0, 4, 0);
       dec.decodeString(';;;?');
-      assert.strictEqual(dec.state[18], 4);
+      assert.strictEqual(dec.state[19], 4);
       assert.strictEqual(dec.state[4], 0);
       assert.strictEqual(dec.state[5], 0);
       assert.strictEqual(dec.state[6], 0);
       assert.strictEqual(dec.state[7], 0);
-      assert.strictEqual(dec.state[15], ST_DATA); // ended on ?
+      assert.strictEqual(dec.state[16], ST_DATA); // ended on ?
       // any command or sixel byte ends ST_ATTR
       const commands = ['#', '$', '-', '!'];
       for (const command of commands) {
@@ -225,12 +225,12 @@ describe('WasmDecoder', () => {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString('"1;1;1;1');
         dec.decodeString(command);
-        assert.notStrictEqual(dec.state[15], ST_ATTR);
+        assert.notStrictEqual(dec.state[16], ST_ATTR);
         // attr underfull
         dec.w.init(0, 0, 4, 0);
         dec.decodeString('"1;1');
         dec.decodeString(command);
-        assert.notStrictEqual(dec.state[15], ST_ATTR);
+        assert.notStrictEqual(dec.state[16], ST_ATTR);
       }
       const sixels = '?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
       for (const c of sixels) {
@@ -238,29 +238,29 @@ describe('WasmDecoder', () => {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString('"1;1;1;1');
         dec.decodeString(c);
-        assert.strictEqual(dec.state[15], ST_DATA);
+        assert.strictEqual(dec.state[16], ST_DATA);
         // attr underfull
         dec.w.init(0, 0, 4, 0);
         dec.decodeString('"1;1');
         dec.decodeString(c);
-        assert.strictEqual(dec.state[15], ST_DATA);
+        assert.strictEqual(dec.state[16], ST_DATA);
       }
       // only respected before any other command or sixel bytes
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('?"1;1;1;1');
-      assert.notStrictEqual(dec.state[15], ST_ATTR);
+      assert.notStrictEqual(dec.state[16], ST_ATTR);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('#0"1;1;1;1');
-      assert.notStrictEqual(dec.state[15], ST_ATTR);
+      assert.notStrictEqual(dec.state[16], ST_ATTR);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('!100"1;1;1;1');
-      assert.notStrictEqual(dec.state[15], ST_ATTR);
+      assert.notStrictEqual(dec.state[16], ST_ATTR);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('$"1;1;1;1');
-      assert.notStrictEqual(dec.state[15], ST_ATTR);
+      assert.notStrictEqual(dec.state[16], ST_ATTR);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('-"1;1;1;1');
-      assert.notStrictEqual(dec.state[15], ST_ATTR);
+      assert.notStrictEqual(dec.state[16], ST_ATTR);
     });
     it('ST_DATA --> ST_COLOR', () => {
       // only '#' should enter ST_ATTR
@@ -268,20 +268,20 @@ describe('WasmDecoder', () => {
         dec.w.init(0, 0, 4, 0);
         dec.decodeString(String.fromCharCode(i));
         i === 35
-          ? assert.strictEqual(dec.state[15], ST_COLOR)
-          : assert.notStrictEqual(dec.state[15], ST_COLOR);
+          ? assert.strictEqual(dec.state[16], ST_COLOR)
+          : assert.notStrictEqual(dec.state[16], ST_COLOR);
       }
       // should reset params
       dec.w.init(0, 0, 4, 0);
       dec.state[18] = 999;    // p_length
       dec.state[19] = 123456; // first param
       dec.decodeString('#');
-      assert.strictEqual(dec.state[18], 1);
-      assert.strictEqual(dec.state[19], 0);
+      assert.strictEqual(dec.state[19], 1);
+      assert.strictEqual(dec.state[20], 0);
       // digit parsing
       dec.decodeString('123456');
-      assert.strictEqual(dec.state[18], 1);
-      assert.strictEqual(dec.state[19], 123456);
+      assert.strictEqual(dec.state[19], 1);
+      assert.strictEqual(dec.state[20], 123456);
       // should apply pending color command (ST_COLOR --> ST_COLOR)
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('#0;2;100;100;100#123');
@@ -291,22 +291,22 @@ describe('WasmDecoder', () => {
       // ST_ATTR --> ST_DATA
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('"?');
-      assert.strictEqual(dec.state[15], ST_DATA);
+      assert.strictEqual(dec.state[16], ST_DATA);
       // ST_COMPRESSION --> ST_DATA, also applies repeat count
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('!10?');
-      assert.strictEqual(dec.state[15], ST_DATA);
+      assert.strictEqual(dec.state[16], ST_DATA);
       assert.strictEqual(dec.w.current_width(), 10);
       // ST_COLOR --> ST_DATA, applying color select (+ definition)
       dec.w.init(0, 0, 4, 0);
       dec.palette[1] = 1111;
       dec.decodeString('#1?'); // select only
-      assert.strictEqual(dec.state[15], ST_DATA);
-      assert.strictEqual(dec.state[16], 1111);
+      assert.strictEqual(dec.state[16], ST_DATA);
+      assert.strictEqual(dec.state[17], 1111);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('#3;2;1;2;3?'); // definition + select
-      assert.strictEqual(dec.state[15], ST_DATA);
-      assert.strictEqual(dec.state[16], toRGBA8888(Math.round(1 / 100 * 255), Math.round(2 / 100 * 255), Math.round(3 / 100 * 255)));
+      assert.strictEqual(dec.state[16], ST_DATA);
+      assert.strictEqual(dec.state[17], toRGBA8888(Math.round(1 / 100 * 255), Math.round(2 / 100 * 255), Math.round(3 / 100 * 255)));
       assert.strictEqual(dec.palette[3], toRGBA8888(Math.round(1 / 100 * 255), Math.round(2 / 100 * 255), Math.round(3 / 100 * 255)));
     });
   });
@@ -315,49 +315,49 @@ describe('WasmDecoder', () => {
       const sixelColor = 255;
       const fillColor = 0;
       dec.w.init(sixelColor, fillColor, 4, 0);
-      assert.strictEqual(dec.state[16], 255);
+      assert.strictEqual(dec.state[17], 255);
       dec.palette[0] = 0;
       dec.palette[1] = 1;
       dec.palette[2] = 2;
       dec.palette[3] = 3;
       dec.decodeString('#0?');
-      assert.strictEqual(dec.state[16], 0);
+      assert.strictEqual(dec.state[17], 0);
       dec.decodeString('#1?');
-      assert.strictEqual(dec.state[16], 1);
+      assert.strictEqual(dec.state[17], 1);
       dec.decodeString('#2?');
-      assert.strictEqual(dec.state[16], 2);
+      assert.strictEqual(dec.state[17], 2);
       dec.decodeString('#3?');
-      assert.strictEqual(dec.state[16], 3);
+      assert.strictEqual(dec.state[17], 3);
       // with modulo back mapping
       dec.decodeString('#4?');
-      assert.strictEqual(dec.state[16], 0);
+      assert.strictEqual(dec.state[17], 0);
       dec.decodeString('#5?');
-      assert.strictEqual(dec.state[16], 1);
+      assert.strictEqual(dec.state[17], 1);
     });
     it('RGB set & select', () => {
       const sixelColor = 255;
       const fillColor = 0;
       dec.w.init(sixelColor, fillColor, 4, 0);
       dec.palette[0] = 123456;
-      assert.strictEqual(dec.state[16], 255);
+      assert.strictEqual(dec.state[17], 255);
       dec.decodeString('#0;2;0;0;0?');
-      assert.strictEqual(dec.state[16], toRGBA8888(0, 0, 0));
+      assert.strictEqual(dec.state[17], toRGBA8888(0, 0, 0));
       assert.strictEqual(dec.palette[0], toRGBA8888(0, 0, 0));
       dec.decodeString('#1;2;100;100;100?');
-      assert.strictEqual(dec.state[16], toRGBA8888(255, 255, 255));
+      assert.strictEqual(dec.state[17], toRGBA8888(255, 255, 255));
       assert.strictEqual(dec.palette[1], toRGBA8888(255, 255, 255));
       dec.decodeString('#2;2;100;0;0?');
-      assert.strictEqual(dec.state[16], toRGBA8888(255, 0, 0));
+      assert.strictEqual(dec.state[17], toRGBA8888(255, 0, 0));
       assert.strictEqual(dec.palette[2], toRGBA8888(255, 0, 0));
       dec.decodeString('#3;2;0;100;0?');
-      assert.strictEqual(dec.state[16], toRGBA8888(0, 255, 0));
+      assert.strictEqual(dec.state[17], toRGBA8888(0, 255, 0));
       assert.strictEqual(dec.palette[3], toRGBA8888(0, 255, 0));
       // with modulo back mapping
       dec.decodeString('#4;2;0;0;100?');
-      assert.strictEqual(dec.state[16], toRGBA8888(0, 0, 255));
+      assert.strictEqual(dec.state[17], toRGBA8888(0, 0, 255));
       assert.strictEqual(dec.palette[0], toRGBA8888(0, 0, 255));
       dec.decodeString('#5;2;1;2;3?');
-      assert.strictEqual(dec.state[16], toRGBA8888(Math.round(1 / 100 * 255), Math.round(2 / 100 * 255), Math.round(3 / 100 * 255)));
+      assert.strictEqual(dec.state[17], toRGBA8888(Math.round(1 / 100 * 255), Math.round(2 / 100 * 255), Math.round(3 / 100 * 255)));
       assert.strictEqual(dec.palette[1], toRGBA8888(Math.round(1 / 100 * 255), Math.round(2 / 100 * 255), Math.round(3 / 100 * 255)));
     });
     it('RGB normalize', () => {
@@ -368,7 +368,7 @@ describe('WasmDecoder', () => {
           for (let b = 0; b <= 100; ++b) {
             dec.decodeString(`#0;2;${r};${g};${b}?`);
             const c = toRGBA8888(Math.round(r / 100 * 255), Math.round(g / 100 * 255), Math.round(b / 100 * 255));
-            assert.strictEqual(dec.state[16], c);
+            assert.strictEqual(dec.state[17], c);
             assert.strictEqual(dec.palette[0], c);
           }
         }
@@ -378,28 +378,28 @@ describe('WasmDecoder', () => {
       // only test edge colors in HLS for now (should max the RGB channels)
       dec.w.init(0, 0, 4, 0);
       dec.decodeString(`#0;1;0;50;100?`);
-      almostEqualColor(dec.state[16], toRGBA8888(0, 0, 255), 0);
+      almostEqualColor(dec.state[17], toRGBA8888(0, 0, 255), 0);
       dec.decodeString(`#0;1;120;50;100?`);
-      almostEqualColor(dec.state[16], toRGBA8888(255, 0, 0), 0);
+      almostEqualColor(dec.state[17], toRGBA8888(255, 0, 0), 0);
       dec.decodeString(`#0;1;240;50;100?`);
-      almostEqualColor(dec.state[16], toRGBA8888(0, 255, 0), 0);
+      almostEqualColor(dec.state[17], toRGBA8888(0, 255, 0), 0);
       dec.decodeString(`#0;1;180;50;100?`);
-      almostEqualColor(dec.state[16], toRGBA8888(255, 255, 0), 0);
+      almostEqualColor(dec.state[17], toRGBA8888(255, 255, 0), 0);
       dec.decodeString(`#0;1;300;50;100?`);
-      almostEqualColor(dec.state[16], toRGBA8888(0, 255, 255), 0);
+      almostEqualColor(dec.state[17], toRGBA8888(0, 255, 255), 0);
       dec.decodeString(`#0;1;60;50;100?`);
-      almostEqualColor(dec.state[16], toRGBA8888(255, 0, 255), 0);
+      almostEqualColor(dec.state[17], toRGBA8888(255, 0, 255), 0);
     });
     it('invalid color commands', () => {
       dec.w.init(255, 0, 4, 0);
       dec.palette[0] = 111;
       // invalid color format, should not change color
       dec.decodeString('#0;3;4;5;6');
-      assert.strictEqual(dec.state[16], 255);
+      assert.strictEqual(dec.state[17], 255);
       assert.strictEqual(dec.palette[0], 111);
       // explicit abort of color definition, should load color from register
       dec.decodeString('#0;0;1;2;3');
-      assert.strictEqual(dec.state[16], 111);
+      assert.strictEqual(dec.state[17], 111);
       assert.strictEqual(dec.palette[0], 111);
     });
   });
@@ -456,6 +456,54 @@ describe('WasmDecoder', () => {
       assert.deepStrictEqual(dec.getPixels(4), new Uint32Array(LIMITS.MAX_WIDTH));
       assert.deepStrictEqual(dec.getPixels(5), new Uint32Array(LIMITS.MAX_WIDTH));
     });
+    describe('repeat count - edge cases', () => {
+      it('!<sixel> counted as 1', () => {
+        // !... default to 1
+        const sixelColor = 255;
+        const fillColor = 0;
+        // single
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!@');
+        assert.strictEqual(dec.w.current_width(), 1);
+        // multiple
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!@!A!?!g!~');
+        assert.strictEqual(dec.w.current_width(), 5);
+        // M2
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('"1;1;20;10!@!A!?!g!~');
+        assert.strictEqual(dec.state[18]-4, 5); // [17](cursor) - 4(padding offset)
+      });
+      it('!0<sixel> counted as 1', () => {
+        // !... default to 1
+        const sixelColor = 255;
+        const fillColor = 0;
+        // single
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!0@');
+        assert.strictEqual(dec.w.current_width(), 1);
+        // multiple
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!0@!0A!0?!0g!000~');
+        assert.strictEqual(dec.w.current_width(), 5);
+        // M2
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('"1;1;20;10!0@!0A!0?!0g!000~');
+        assert.strictEqual(dec.state[18]-4, 5); // [17](cursor) - 4(padding offset)
+      });
+      it('!<non-sixel> ignored', () => {
+        // !... default to 1
+        const sixelColor = 255;
+        const fillColor = 0;
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('!-!$!#@@@');
+        assert.strictEqual(dec.w.current_width(), 3);
+        // M2
+        dec.w.init(sixelColor, fillColor, 256, 0);
+        dec.decodeString('"1;1;20;10!-!$!#@@@');
+        assert.strictEqual(dec.state[18]-4, 3);
+      });
+    });
   });
   describe('callbacks', () => {
     it('mode_parsed', () => {
@@ -511,14 +559,14 @@ describe('WasmDecoder', () => {
       dec = new TestDecoder(_ => 0, _ => 0);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('"1;1;10;5?????');
-      assert.strictEqual(dec.state[17], 5 + 4);  // cursor pos (+4)
+      assert.strictEqual(dec.state[18], 5 + 4);  // cursor pos (+4)
       assert.strictEqual(dec.w.current_width(), 5);
     });
     it('mode_parsed, return 1 (abort)', () => {
       dec = new TestDecoder(_ => 1, _ => 0);
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('"1;1;10;5?????');
-      assert.strictEqual(dec.state[17], 4);  // cursor pos (+4)
+      assert.strictEqual(dec.state[18], 4);  // cursor pos (+4)
       assert.strictEqual(dec.w.current_width(), 0);
     });
     it('handle_band, return 0 (continue)', () => {
@@ -528,14 +576,14 @@ describe('WasmDecoder', () => {
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('"1;1;10;5A-BB-CCC-DDDD-EEEEE');
       assert.deepStrictEqual(stack, [1, 2, 3, 4]);
-      assert.strictEqual(dec.state[17], 5 + 4);  // cursor pos (+4)
+      assert.strictEqual(dec.state[18], 5 + 4);  // cursor pos (+4)
       assert.strictEqual(dec.w.current_width(), 5);
       stack.length = 0;
       // M2 - always reports rasterWidth as band width
       dec.w.init(0, 0, 4, 1);
       dec.decodeString('"1;1;10;5A-BB-CCC-DDDD-EEEEE');
       assert.deepStrictEqual(stack, [10, 10, 10, 10]);
-      assert.strictEqual(dec.state[17], 5 + 4);  // cursor pos (+4)
+      assert.strictEqual(dec.state[18], 5 + 4);  // cursor pos (+4)
       assert.strictEqual(dec.w.current_width(), 10);
     });
     it('handle_band, return 1 (abort)', () => {
@@ -545,14 +593,14 @@ describe('WasmDecoder', () => {
       dec.w.init(0, 0, 4, 0);
       dec.decodeString('"1;1;10;5A-BB-CCC-DDDD-EEEEE');
       assert.deepStrictEqual(stack, [1, 2, 3]);
-      assert.strictEqual(dec.state[17], 0 + 4);  // cursor pos (+4)
+      assert.strictEqual(dec.state[18], 0 + 4);  // cursor pos (+4)
       assert.strictEqual(dec.w.current_width(), 0);
       stack.length = 0;
       // M2 - always reports rasterWidth as band width
       dec.w.init(0, 0, 4, 1);
       dec.decodeString('"1;1;10;5A-BB-CCC-DDDD-EEEEE');
       assert.deepStrictEqual(stack, [10]);
-      assert.strictEqual(dec.state[17], 0 + 4);  // cursor pos (+4)
+      assert.strictEqual(dec.state[18], 0 + 4);  // cursor pos (+4)
       assert.strictEqual(dec.w.current_width(), 10);
     });
   });
@@ -720,7 +768,7 @@ describe('Decoder', () => {
       dec.init(0, null, 256);
       dec.decodeString('ABC-DEFGH-IJ');   // M1: 5x18, current 2
       assert.strictEqual(dec.width, 5);
-      assert.strictEqual(dec.height, 18);
+      assert.strictEqual(dec.height, 16);
       assert.strictEqual((dec as any)._wasm.current_width(), 2);
       dec.init(0, null, 256);
       assert.strictEqual(dec.width, 0);
@@ -737,14 +785,14 @@ describe('Decoder', () => {
       assert.strictEqual((dec as any)._wasm.current_width(), 0);
     });
   });
-  describe('decode, properties & data32', () => {
+  describe('decode, properties & data8/32', () => {
     describe('mode settlement', () => {
       it('lvl 1 image --> M1', () => {
         const dec = new Decoder();
         dec.init(9, new Uint32Array([128, 129, 130, 131]), 4, false);
-        dec.decodeString('#0A#1B$-#2!3C#3D');  // 4x12px - A: -x---- B: xx---- C: --x--- D: x-x---
+        dec.decodeString('#0A#1B$-#2!3C#3D');  // 4x9px - A: -x---- B: xx---- C: --x--- D: x-x---
         assert.strictEqual(dec.properties.fillColor, 9);
-        assert.strictEqual(dec.properties.height, 12);
+        assert.strictEqual(dec.properties.height, 9);
         assert.strictEqual(dec.properties.level, 1);
         assert.strictEqual(dec.properties.mode, 1);
         assert.strictEqual(dec.properties.memUsage > 400000, true);
@@ -753,15 +801,13 @@ describe('Decoder', () => {
         assert.strictEqual(dec.properties.width, 4);
         assert.deepStrictEqual(dec.properties.rasterAttributes, {numerator: 0, denominator: 0, width: 0, height: 0});
         const pixels = dec.data32;
-        assert.strictEqual(pixels.length, 48);
+        assert.strictEqual(pixels.length, 36);
         assert.strictEqual(pixels[0], 9); assert.strictEqual(pixels[4], 128); // A
         assert.strictEqual(pixels[1], 129); assert.strictEqual(pixels[5], 129); // B
         assert.strictEqual(pixels[24], 9); assert.strictEqual(pixels[28], 9); assert.strictEqual(pixels[32], 130); // C
         assert.strictEqual(pixels[25], 9); assert.strictEqual(pixels[29], 9); assert.strictEqual(pixels[33], 130); // C
         assert.strictEqual(pixels[26], 9); assert.strictEqual(pixels[30], 9); assert.strictEqual(pixels[34], 130); // C
         assert.strictEqual(pixels[27], 131); assert.strictEqual(pixels[31], 9); assert.strictEqual(pixels[35], 131); // D
-        // check last pixel
-        assert.strictEqual(pixels[pixels.length - 1], 9);
         // current_width
         assert.strictEqual((dec as any)._wasm.current_width(), 4);
         // enter another line
@@ -796,7 +842,7 @@ describe('Decoder', () => {
         dec.init(9, new Uint32Array([128, 129, 130, 131]), 4, false);
         dec.decodeString('"1;1;20;10#0A#1B$-#2!3C#3D');  // 4x12px - A: -x---- B: xx---- C: --x--- D: x-x---
         assert.strictEqual(dec.properties.fillColor, 9);
-        assert.strictEqual(dec.properties.height, 12);
+        assert.strictEqual(dec.properties.height, 9);
         assert.strictEqual(dec.properties.level, 2);
         assert.strictEqual(dec.properties.mode, 1);
         assert.strictEqual(dec.properties.memUsage > 400000, true);
@@ -805,15 +851,13 @@ describe('Decoder', () => {
         assert.strictEqual(dec.properties.width, 4);
         assert.deepStrictEqual(dec.properties.rasterAttributes, {numerator: 1, denominator: 1, width: 20, height: 10});
         const pixels = dec.data32;
-        assert.strictEqual(pixels.length, 48);
+        assert.strictEqual(pixels.length, 36);
         assert.strictEqual(pixels[0], 9); assert.strictEqual(pixels[4], 128); // A
         assert.strictEqual(pixels[1], 129); assert.strictEqual(pixels[5], 129); // B
         assert.strictEqual(pixels[24], 9); assert.strictEqual(pixels[28], 9); assert.strictEqual(pixels[32], 130); // C
         assert.strictEqual(pixels[25], 9); assert.strictEqual(pixels[29], 9); assert.strictEqual(pixels[33], 130); // C
         assert.strictEqual(pixels[26], 9); assert.strictEqual(pixels[30], 9); assert.strictEqual(pixels[34], 130); // C
         assert.strictEqual(pixels[27], 131); assert.strictEqual(pixels[31], 9); assert.strictEqual(pixels[35], 131); // D
-        // check last pixel
-        assert.strictEqual(pixels[pixels.length - 1], 9);
         // current_width
         assert.strictEqual((dec as any)._wasm.current_width(), 4);
         // enter another line
@@ -920,6 +964,52 @@ describe('Decoder', () => {
         dec2.decode(container);
       }
       assert.deepStrictEqual(dec2.data32, dec1.data32);
+    });
+    it('data8/32 access', () => {
+      const data = fs.readFileSync('./testfiles/test1_clean.sixel');
+      const dec = new Decoder();
+      dec.init(0, null, 256);
+      dec.decode(data);
+      const data32 = dec.data32;
+      const data8 = dec.data8;
+      assert.strictEqual(data8.length, data32.length * 4);
+      for (let i = 0; i < data32.length; ++i) {
+        const v1 = data32[i];
+        const v2 = Array.from(data8.slice(i*4, i*4+4)) as [number, number, number, number];
+        assert.strictEqual(toRGBA8888(...v2), v1);
+      }
+      // from empty data32
+      dec.init(0, null, 256);
+      assert.strictEqual(dec.data8.length, 0);
+    });
+    it('M1 reports and uses correct with/height', () => {
+      const dec = new Decoder();
+      // no sixels at all
+      dec.decodeString('#0;');
+      assert.strictEqual(dec.width, 0);
+      assert.strictEqual(dec.height, 0);
+      assert.strictEqual(dec.data32.length, 0);
+
+      // helper to generate arbitrary diagonale
+      function diag(n: number) {
+        const d6 = '@ACGO_';
+        let final = '';
+        for (let i = 0; i < Math.floor(n / 6); ++i) {
+          final += d6;
+          final += '$-!' + ((i+1)*6) + '?';
+        }
+        final += d6.slice(0, n % 6)
+        return final;
+      }
+
+      // draw diagonale as 1x1, 2x2, 3x3, ... 19x19
+      for (let h = 1; h < 19; ++h) {
+        dec.init(0, null, 256);
+        dec.decodeString(diag(h));
+        assert.strictEqual(dec.width, h);
+        assert.strictEqual(dec.height, h);
+        assert.strictEqual(dec.data32.length, h*h);
+      }
     });
   });
   describe('release', () => {
