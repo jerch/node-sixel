@@ -58,7 +58,7 @@ It exposes the following properties:
     Reports the current width of the current image. For `truncate=true` this may report the raster width, if a valid raster attribute was found. Otherwise reports rightmost band cursor advance seen so far. 
 
 - `height: number`  
-    Reports the current height of the current image. Note that for `trancate=true` this may report the raster height, if a valid raster attribute was found. Otherwise reports the height in multiple of 6 pixels (seen sixel bands).
+    Reports the current height of the current image. Note that for `trancate=true` this may report the raster height, if a valid raster attribute was found. Otherwise reports the lowermost pixel position touched by a sixel.
 
 - `memoryUsage: number`  
     Reports the current memory usage of the decoder for wasm module memory and allocated pixel buffer.

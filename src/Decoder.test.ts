@@ -986,6 +986,35 @@ describe('Decoder', () => {
       dec.init(0, null, 256);
       assert.strictEqual(dec.data8.length, 0);
     });
+    it.only('M1 reports and uses correct with/height', () => {
+      const dec = new Decoder();
+      // no sixels at all
+      dec.decodeString('#0;');
+      assert.strictEqual(dec.width, 0);
+      assert.strictEqual(dec.height, 0);
+      assert.strictEqual(dec.data32.length, 0);
+
+      // helper to generate arbitrary diagonale
+      function diag(n: number) {
+        const d6 = '@ACGO_';
+        let final = '';
+        for (let i = 0; i < Math.floor(n / 6); ++i) {
+          final += d6;
+          final += '$-!' + ((i+1)*6) + '?';
+        }
+        final += d6.slice(0, n % 6)
+        return final;
+      }
+
+      // draw diagonale as 1x1, 2x2, 3x3, ... 19x19
+      for (let h = 1; h < 19; ++h) {
+        dec.init(0, null, 256);
+        dec.decodeString(diag(h));
+        assert.strictEqual(dec.width, h);
+        assert.strictEqual(dec.height, h);
+        assert.strictEqual(dec.data32.length, h*h);
+      }
+    });
   });
   describe('release', () => {
     const data = fs.readFileSync('./testfiles/test1_clean.sixel');

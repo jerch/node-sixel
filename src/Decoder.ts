@@ -253,13 +253,13 @@ export class Decoder {
   /**
    * Height of the image data.
    * Returns the rasterHeight in level2/truncating mode,
-   * otherwise 6 * seen bands.
+   * otherwise height touched by sixels.
    */
   public get height(): number {
     return this._mode !== ParseMode.M1
       ? this._height
       : this._wasm.current_width()
-        ? this._bandWidths.length * 6 + 6
+        ? this._bandWidths.length * 6 + this._wasm.current_height()
         : this._bandWidths.length * 6;
   }
 
@@ -367,7 +367,7 @@ export class Decoder {
     }
 
     // get width of pending band to peek into left-over data
-    let currentWidth = this._wasm.current_width();
+    const currentWidth = this._wasm.current_width();
 
     if (this._mode === ParseMode.M2) {
       let remaining = this.height - this._currentHeight;
@@ -407,7 +407,8 @@ export class Decoder {
         }
       }
 
-      // worst case: copy re-aligned pixels if we have bands with different width
+      // worst case: re-align pixels if we have bands with different width
+      // This is somewhat allocation intensive, any way to do that in-place, and just once?
       const final = new Uint32Array(this.width * this.height);
       final.fill(this._fillColor);
       let finalOffset = 0;
@@ -419,9 +420,12 @@ export class Decoder {
           finalOffset += this.width;
         }
       }
+      // also handle left-over pixels of the current band
       if (currentWidth) {
         const adv = this._PIXEL_OFFSET;
-        for (let i = 0; i < 6; ++i) {
+        // other than finished bands, this runs only up to currentHeight
+        const currentHeight = this._wasm.current_height();
+        for (let i = 0; i < currentHeight; ++i) {
           final.set(this._pSrc.subarray(adv * i, adv * i + currentWidth), finalOffset + this.width * i);
         }
       }

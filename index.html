@@ -35,9 +35,13 @@
   <br><br>
   <label><input type="checkbox" name="slow" id="slow" value="value"> Simulate slow chunks</label>
   <br>
+  <label><input type="checkbox" name="m1" id="m1" value="value"> Force M1 Mode (truncate: false)</label>
+  <br>
   <label><input type="color" name="fillColor" id="fillColor" value="#000000"> background color</label>
   <br><br>
   <span id="stats"></span>
+  <br>
+  <span id="decodetime"></span>
   <br><br>
   <canvas id="output_wasm" style="border: 1px solid black"></canvas>
   <script src="/dist/full.umd.js"></script>
@@ -75,7 +79,16 @@ async function setImage(s) {
   clearInterval(drawHandle);
 
   // initialize decoder
-  decoder.init(sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)));
+  decoder.init(
+    // fillColor - BG color
+    sixel.toRGBA8888(...hexColorToRGB(document.getElementById('fillColor').value)),
+    // palette (null: dont change, undefined: pull default)
+    undefined,
+    // paletteLimit - max usable palette slots
+    256,
+    // truncate - whether to cut at raster dimensions (false - always M1 mode, true - maybe M2)
+    !document.getElementById('m1').checked
+  );
 
   // read in
   if (s === 'wiki') {
@@ -84,6 +97,9 @@ async function setImage(s) {
     const response = await fetch('/testfiles/' + s);
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (document.getElementById('slow').checked) {
+      // inspect slow transmission image construction
+      // (dont copy this, its just a wild hack w'o proper async state handling)
+      document.getElementById('decodetime').innerText = '';
       let localHandle = drawHandle = setInterval(() => drawImageWasm(), 100);
       let i = 0;
       const endTens = bytes.length - (bytes.length % 10);
@@ -99,7 +115,9 @@ async function setImage(s) {
       }
       clearInterval(drawHandle);
     } else {
+      const start = Date.now();
       decoder.decode(bytes);
+      document.getElementById('decodetime').innerText = 'decoding time: ' + (Date.now() - start) + 'ms';
     }
   }
   document.getElementById('stats').innerText = 'width: ' + decoder.width + '\nheight: ' + decoder.height;

@@ -90,6 +90,10 @@ Exported symbols:
     Return the cursor advance of the current band in M1 mode, or width in M2 mode.
     This is needed to properly construct the full image at the end of decoding,
     in case the data did not finish with LF.
+- `int current_width()`  
+    M1 mode only - return the current lowermost pixel position touched by a sixel
+    of the current band. This is needed to properly construct the full image with
+    proper height for the current band, in case the data did not finish with LF.
 
 Needed callbacks:
  - `int mode_parsed(int mode)`  
@@ -121,10 +125,10 @@ Needed callbacks:
   raster dimensions on decoder side is not spec-conform, it is the expected data format created by
   a spec-conform encoder.
 - If `truncate` is not set, the width will be derived from cursor advance to the right, clamped
-  to `MAX_WIDTH-4`. In this mode, the height is always reported in terms of multiple of 6
-  (pixel height of a sixel band). Furthermore in this mode the height is not limited by any means,
-  thus decoding may run forever. Use some sort of accounting during `handle_band` to spot
-  malformed data or excessive memory usage, especially when dealing with data streams.
+  to `MAX_WIDTH-4`. In this mode, `current_height` is reported as lowermost pixel position touched by sixels.
+  Furthermore in this mode the height is not limited by any means, thus decoding may run forever.
+  Use some sort of accounting during `handle_band` to spot malformed data or excessive memory usage,
+  especially when dealing with data streams.
 - Palette colors are applied immediately to sixels (printer mode), there is no terminal-like indexed mode.
   While this is in line with the spec, it does not allow to mimick the palette behavior of older terminals
   (e.g. palette animations are not possible).

@@ -144,6 +144,7 @@ export interface IWasmDecoderExports extends Record<string, WebAssembly.ExportVa
   init(sixelColor: number, fillColor: number, paletteLimit: number, truncate: number): void;
   decode(start: number, end: number): void;
   current_width(): number;
+  current_height(): number;
 }
 
 // wasm decoder
