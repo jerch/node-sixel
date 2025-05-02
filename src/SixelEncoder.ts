@@ -91,10 +91,13 @@ function processBand(
       // skip expensive color to palette matching if we have same color as before
       if (color !== oldColor) {
         oldColor = color;
-        idx = alpha(color) ? colorMap.get(color) : 0;
-        if (idx === undefined) {
+        let maybeIDX = alpha(color) ? colorMap.get(color) : 0;
+        if (maybeIDX === undefined) {
           idx = nearestColorIndex(color, paletteRGB) + 1;
           colorMap.set(color, idx);
+        }
+        else {
+          idx = maybeIDX;
         }
         // extend accu/code handling to new color
         if (slots[idx] === -1) {
