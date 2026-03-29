@@ -30,7 +30,7 @@ function s2b(s: string): Uint8Array {
 }
 
 /* istanbul ignore next */
-function decodeBase64(s: string): Uint8Array {
+function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(s, 'base64');
   }

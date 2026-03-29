@@ -9,7 +9,7 @@ import { LIMITS } from './wasm';
 
 
 /* istanbul ignore next */
-function decodeBase64(s: string): Uint8Array {
+function decodeBase64(s: string): Uint8Array<ArrayBuffer> {
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(s, 'base64');
   }
