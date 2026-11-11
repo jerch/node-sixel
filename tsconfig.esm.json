@@ -8,7 +8,8 @@
     "declaration": true,
     "noImplicitAny": true,
     "strict": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": ["mocha", "node"]
   },
   "exclude": [
     "node_modules",
