@@ -178,7 +178,7 @@ static inline int apply_color(int color) {
   if (ps.p_length == 1) {
     color = ps.palette[fastmod(ps.params[0], ps.palette_length)];
   } else if (ps.p_length == 5
-    && ps.params[1] == 1 ? ps.params[2] <= 360 : ps.params[2] <= 100
+    && (ps.params[1] == 1 ? ps.params[2] <= 360 : ps.params[2] <= 100)
     && ps.params[3] <= 100
     && ps.params[4] <= 100)
   {

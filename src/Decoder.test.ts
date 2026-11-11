@@ -402,6 +402,26 @@ describe('WasmDecoder', () => {
       assert.strictEqual(dec.state[17], 111);
       assert.strictEqual(dec.palette[0], 111);
     });
+    describe('bound checks', () => {
+      for (const [_2, _3, _4] of [[101, 100, 100], [100, 101, 100], [100, 100, 101]]) {
+        const seq = `#0;2;${_2};${_3};${_4}?`;
+        it('RGB: ' + seq, () => {
+          dec.w.init(255, 0, 4, 0);
+          dec.palette[0] = 111;
+          dec.decodeString(seq);
+          assert.strictEqual(dec.palette[0], 111);
+        });
+      }
+      for (const [_2, _3, _4] of [[361, 100, 100], [360, 101, 100], [360, 100, 101]]) {
+        const seq = `#0;1;${_2};${_3};${_4}?`;
+        it('HLS: ' + seq, () => {
+          dec.w.init(255, 0, 4, 0);
+          dec.palette[0] = 111;
+          dec.decodeString(seq);
+          assert.strictEqual(dec.palette[0], 111);
+        });
+      }
+    });
   });
   describe('painting', () => {
     it('put single - full sixel range', () => {
