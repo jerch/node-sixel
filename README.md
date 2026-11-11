@@ -324,7 +324,7 @@ Some usage examples:
 ### Status
 Beta.
 
-Automatically tested on nodejs 12, 14 and 16.
+Automatically tested on nodejs 20, 22, 24 and 26.
 Manually tested on recent versions of Chrome, Firefox and Webkit.
 
 ### References
